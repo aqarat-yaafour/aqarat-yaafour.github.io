@@ -179,25 +179,17 @@ function mediaHtml(x, up, big) {
   const soon = big ? '<span class="soon">الصور قريباً</span>' : "";
   return `<div class="media${big ? " big" : ""}"><span class="num">${n}</span><span class="unit">${u}</span>${soon}</div>`;
 }
-/* شرائح المواصفات: المساحة والنوع والأوراق */
-function chips(x) {
-  const [n, u] = sizeOf(x);
-  const out = [u ? n + " " + u : String(n), x.cat];
-  if (x.papers) out.push(x.papers);
-  return out.map(c => `<li>${esc(c)}</li>`).join("");
-}
 function cardHtml(x, up) {
   up = up || "";
   const [main, unit2, total] = priceTxt(x);
   return `<article class="card glass" data-cat="${CAT_EN[x.cat]}" data-area="${esc(x.area)}" data-total="${total ? Math.round(total) : 0}">
   <a class="cardlink" href="${up}listing/${x.code}.html">
-    <div class="shot">${mediaHtml(x, up, false)}<span class="badge">للبيع · ${x.cat}</span><span class="code">${x.code}</span></div>
+    <div class="shot">${mediaHtml(x, up, false)}<span class="badge">للبيع</span><span class="code">${x.code}</span></div>
     <div class="body">
       <h3>${esc(x.title)}</h3>
-      <p class="where">${esc(x.area)} · ريف دمشق</p>
-      <div class="price"><span class="main">${main}</span>${unit2 ? `<span class="u">${unit2}</span>` : ""}</div>
-      <ul class="chips">${chips(x)}</ul>
-      <span class="more">التفاصيل والتواصل ←</span>
+      <p class="where"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS.pin}</svg>${esc(x.area)} · ريف دمشق</p>
+      <div class="specrow">${specRow(x)}</div>
+      <div class="pricebar"><span class="main">${main}</span>${unit2 ? `<span class="u">${unit2}</span>` : ""}<span class="ar">←</span></div>
     </div>
   </a>
 </article>`;
@@ -264,6 +256,9 @@ const WHY = [
   ["tools", "تقدير كلفة البناء", "أتابع أعمال البناء والإكساء، فأقدّر لك الكلفة قبل الشراء."]
 ];
 const ICONS = {
+  area: '<path d="M3 3h18v18H3V3Zm2 2v14h14V5H5Zm2 2h4v2H9v2H7V7Zm10 10h-4v-2h2v-2h2v4Z"/>',
+  type: '<path d="M12 3 2 10h3v10h5v-6h4v6h5V10h3L12 3Z"/>',
+  build: '<path d="M4 21V9l8-6 8 6v12h-6v-6h-4v6H4Z"/>',
   pin: '<path d="M12 2a7 7 0 0 0-7 7c0 5 7 13 7 13s7-8 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/>',
   globe: '<path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 2c1.4 0 2.9 2.6 3.3 6H8.7C9.1 6.6 10.6 4 12 4ZM4.3 11h3.4c-.1 1.3-.1 2.7 0 4H4.3a8 8 0 0 1 0-4Zm0 6h3.7c.4 1.9 1 3.4 1.7 4.4A8 8 0 0 1 4.3 17ZM12 20c-1.4 0-2.9-2.6-3.3-6h6.6c-.4 3.4-1.9 6-3.3 6Zm3.7-8H8.3c-.1-1.3-.1-2.7 0-4h7.4c.1 1.3.1 2.7 0 4Zm.6 9.4c.7-1 1.3-2.5 1.7-4.4h3.7a8 8 0 0 1-5.4 4.4ZM16.3 15c.1-1.3.1-2.7 0-4h3.4a8 8 0 0 1 0 4h-3.4Z"/>',
   doc: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6Zm-3 16-3.5-3.5 1.4-1.4L11 15.2l4.1-4.1 1.4 1.4L11 18Z"/>',
@@ -272,8 +267,40 @@ const ICONS = {
 function whyHtml() {
   return WHY.map(([key, h, t]) =>
     `<div class="why-card glass">` +
-    `<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">${ICONS[key]}</svg>` +
+    `<span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">${ICONS[key]}</svg></span>` +
     `<h3>${h}</h3><p>${t}</p></div>`).join("");
+}
+
+/* العقار المميّز: الأغلى إجمالاً (نفس ترتيب build_site.py) */
+function featured(live) {
+  const ok = live.filter(x => totalOf(x) > 0 && x.confirmed !== false);
+  if (!ok.length) return live[0] || null;
+  return ok.slice().sort((a, b) => (totalOf(b) - totalOf(a)) || a.code.localeCompare(b.code))[0];
+}
+function heroStyle(live) {
+  const f = featured(live), ph = (f && f.photos) || [];
+  return ph.length ? ` style="background-image:url(&quot;${esc(ph[0])}&quot;)"` : "";
+}
+function specRow(x) {
+  const [n, u] = sizeOf(x);
+  const items = [["area", u ? n + " " + u : String(n)], ["type", x.cat]];
+  if (x.papers) items.push(["doc", x.papers]);
+  else if (x.bua) items.push(["build", x.bua + " م² بناء"]);
+  return items.map(([k, v]) =>
+    `<span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS[k]}</svg>${esc(v)}</span>`).join("");
+}
+function featureHtml(live) {
+  const x = featured(live);
+  if (!x) return "";
+  const [main, unit2] = priceTxt(x);
+  return `<aside class="feature glass">
+      <p class="tag">عقار مميّز</p>
+      <h2>${esc(x.title)}</h2>
+      <p class="where"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS.pin}</svg>${esc(x.area)} · ريف دمشق</p>
+      <div class="specrow">${specRow(x)}</div>
+      <div class="fprice"><span class="main">${main}</span>${unit2 ? `<span class="u">${unit2}</span>` : ""}</div>
+      <a class="flink" href="listing/${x.code}.html">تفاصيل العقار <span class="ar">←</span></a>
+    </aside>`;
 }
 /* نص السكربت مطابق حرفياً لـSEARCH_JS في build_site.py */
 const SEARCH_JS = `
@@ -339,30 +366,37 @@ function indexPage(live) {
     if (v) stats += `<span><b>${v}</b>${CAT_AR[en]}</span>`;
   }
   const body = `${NAV("")}
-<main class="wrap">
-  <section class="hero glass">
+<section class="hero">
+  <div class="hero-bg"${heroStyle(live)}></div>
+  <div class="hero-inner">
     <div class="hero-txt">
-      <p class="eyebrow">ريف دمشق · يعفور · قرى الشام · الصبورة</p>
-      <h1>عقارات يعفور وقرى الشام</h1>
-      <p class="lead">أراضٍ وفلل ومزارع وشقق للبيع، مختارة ومعاينة على الأرض. مرافقة من المعاينة حتى التسجيل.</p>
+      <p class="eyebrow">عقارات مختارة · ريف دمشق</p>
+      <h1>عقارات يعفور<br><span class="g">وقرى الشام</span></h1>
+      <p class="lead">أراضٍ وفلل ومزارع وشقق للبيع، معاينة على الأرض.<br>مرافقة من المعاينة حتى التسجيل.</p>
+      <div class="actions">
+        <a class="btn btn-primary" target="_blank" rel="noopener" href="${wa("مرحباً أستاذ محمد، أرغب بالاستفسار عن العقارات المتوفرة لديك.")}">تواصل على واتساب <span class="ar">←</span></a>
+        <a class="btn btn-ghost" href="#listings">تصفّح العقارات</a>
+      </div>
       <div class="who">
         <img class="avatar" src="img/mohammad-khaled.jpg" width="128" height="128" alt="${NAME} مستشار عقاري في يعفور وقرى الشام">
-        <div><b>${NAME}</b><small>${ROLE}</small></div>
-      </div>
-      <div class="actions">
-        <a class="btn btn-primary" target="_blank" rel="noopener" href="${wa("مرحباً أستاذ محمد، أرغب بالاستفسار عن العقارات المتوفرة لديك.")}">تواصل على واتساب</a>
-        <a class="btn btn-ghost" href="tel:+${PHONE_INTL}" dir="ltr">${PHONE_LOCAL}</a>
+        <div><b>${NAME}</b><small>${ROLE} · يعفور وقرى الشام والصبورة</small></div>
       </div>
     </div>
-    <div class="stats"><span><b>${live.length}</b>عقار متاح</span>${stats}</div>
-  </section>
-  ${searchHtml()}
-  <h2 id="listings">أراضٍ وفلل ومزارع للبيع في يعفور وقرى الشام</h2>
-  <p class="rcount" id="rcount">${live.length} عقار متاح</p>
+    ${featureHtml(live)}
+  </div>
+</section>
+<div class="wrap">${searchHtml()}</div>
+<main class="wrap">
+  <div class="sechead">
+    <div>
+      <p class="eyebrow">العقارات المتاحة</p>
+      <h2 id="listings">أراضٍ وفلل ومزارع<br><span class="g">للبيع في يعفور وقرى الشام</span></h2>
+    </div>
+    <p class="rcount" id="rcount">${live.length} عقار متاح</p>
+  </div>
   <div class="grid" id="listings-grid">${live.map(x => cardHtml(x, "")).join("")}</div>
   <p class="rnone" id="rnone" hidden>ما في عقار مطابق لهالبحث. جرّب توسّع الميزانية أو غيّر النوع.</p>
   <section class="why">
-    <h2>ليش تتعامل معي</h2>
     <div class="why-grid">${whyHtml()}</div>
   </section>
   <section id="about" class="about glass">
