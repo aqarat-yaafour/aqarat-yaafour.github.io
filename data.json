@@ -16,7 +16,9 @@
   "total": 25000000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [
+   "img/MK-001-1.jpg"
+  ]
  },
  {
   "code": "MK-002",
