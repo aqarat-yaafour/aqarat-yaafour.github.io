@@ -212,16 +212,18 @@ function listingPage(x, live) {
   };
   if ((x.photos || []).length) jsonld.image = x.photos.map(p => BASE + "/" + p);
   jsonld.broker = { "@type": "RealEstateAgent", name: NAME, telephone: "+" + PHONE_INTL, areaServed: ["يعفور", "قرى الشام", "الصبورة", "ريف دمشق"], url: BASE + "/" };
+  const areaPage = AREA_SLUG[x.area] + ".html";
   const crumbs = {
     "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
       { "@type": "ListItem", position: 1, name: "العقارات", item: BASE + "/" },
-      { "@type": "ListItem", position: 2, name: x.title, item: canonical }]
+      { "@type": "ListItem", position: 2, name: "عقارات " + x.area, item: BASE + "/" + areaPage },
+      { "@type": "ListItem", position: 3, name: x.title, item: canonical }]
   };
   const extra = `<script type="application/ld+json">${JSON.stringify(crumbs)}<\/script>`;
   const rel = live.filter(y => y.cat === x.cat && y.code !== x.code).slice(0, 3);
   const body = `${NAV("../")}
 <main class="wrap">
-  <nav class="crumbs"><a href="../index.html">العقارات</a> <span>›</span> ${esc(x.title)}</nav>
+  <nav class="crumbs"><a href="../index.html">العقارات</a> <span>›</span> <a href="../${areaPage}">عقارات ${esc(x.area)}</a> <span>›</span> ${esc(x.title)}</nav>
   <article class="detail glass">
     <div class="top"><span class="badge">للبيع · ${x.cat}</span><span class="code">${x.code}</span></div>
     <h1>${esc(x.title)} في ${esc(x.area)}</h1>
@@ -350,6 +352,100 @@ function searchHtml(live) {
   </form>`;
 }
 
+/* ===== صفحات التصفّح (مطابقة لـ collections_all في build_site.py) ===== */
+const AREA_SLUG = { "يعفور": "yaafour", "قرى الشام": "qura-alsham", "الصبورة": "sabboura" };
+const CAT_SLUG = { land: "land", villa: "villas", farm: "farms", apt: "apartments" };
+const CAT_PL = { land: "أراضٍ", villa: "فلل", farm: "مزارع", apt: "شقق" };
+const MIN_CAT = 2;
+
+function nProp(n) {
+  if (n === 1) return "عقار واحد";
+  if (n === 2) return "عقاران";
+  if (n >= 3 && n <= 10) return n + " عقارات";
+  return n + " عقاراً";
+}
+function collectionsAll(live) {
+  const out = [];
+  for (const a of AREA_ORDER) {
+    const items = live.filter(x => x.area === a);
+    if (!items.length) continue;
+    out.push({
+      slug: AREA_SLUG[a] + ".html", h1: "عقارات " + a,
+      title: `عقارات ${a} — أراضٍ وفلل ومزارع للبيع | ${NAME} مستشار عقاري`,
+      crumb: "عقارات " + a, area: a, items
+    });
+    for (const c of ["land", "villa", "farm", "apt"]) {
+      const sub = items.filter(x => CAT_EN[x.cat] === c);
+      if (sub.length < MIN_CAT) continue;
+      out.push({
+        slug: `${CAT_SLUG[c]}-${AREA_SLUG[a]}.html`, h1: `${CAT_PL[c]} للبيع في ${a}`,
+        title: `${CAT_PL[c]} للبيع في ${a} — ${nProp(sub.length)} | ${NAME} مستشار عقاري`,
+        crumb: `${CAT_PL[c]} في ${a}`, area: a, items: sub
+      });
+    }
+  }
+  return out;
+}
+function collectionLinks(cols, current) {
+  const ls = cols.filter(c => c.slug !== current)
+    .map(c => `<a href="${c.slug}">${esc(c.crumb)}</a>`).join("");
+  return `<nav class="browse"><h2>تصفّح حسب المنطقة والنوع</h2><div class="browse-links">${ls}</div></nav>`;
+}
+function collectionPage(c, cols) {
+  const items = c.items;
+  const totals = items.map(totalOf).filter(t => t > 0).sort((a, b) => a - b);
+  let rng = "";
+  if (totals.length) {
+    rng = totals[0] !== totals[totals.length - 1]
+      ? ` الأسعار من ${money(totals[0])} إلى ${money(totals[totals.length - 1])}.`
+      : ` السعر ${money(totals[0])}.`;
+  }
+  const desc = `${c.h1}: ${nProp(items.length)} متاحة الآن مع ${NAME}، ${ROLE} في يعفور وقرى الشام.`
+    + `${rng} معاينة على الأرض ومرافقة من المعاينة حتى التسجيل. واتساب ${PHONE_LOCAL}.`;
+  const canonical = `${BASE}/${c.slug}`;
+  const jsonld = {
+    "@context": "https://schema.org", "@type": "CollectionPage", name: c.h1,
+    url: canonical, description: desc,
+    about: {
+      "@type": "Place", name: c.area,
+      address: { "@type": "PostalAddress", addressLocality: c.area, addressRegion: "ريف دمشق", addressCountry: "SY" }
+    },
+    mainEntity: {
+      "@type": "ItemList", numberOfItems: items.length,
+      itemListElement: items.map((x, i) => ({
+        "@type": "ListItem", position: i + 1, url: `${BASE}/listing/${x.code}.html`, name: x.title
+      }))
+    },
+    provider: { "@type": "RealEstateAgent", name: NAME, telephone: "+" + PHONE_INTL, url: BASE + "/" }
+  };
+  const crumbs = {
+    "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+      { "@type": "ListItem", position: 1, name: "العقارات", item: BASE + "/" },
+      { "@type": "ListItem", position: 2, name: c.crumb, item: canonical }]
+  };
+  const extra = `<script type="application/ld+json">${JSON.stringify(crumbs)}<\/script>`;
+  const body = `${NAV("")}
+<main class="wrap">
+  <nav class="crumbs"><a href="index.html">العقارات</a> <span>›</span> ${esc(c.crumb)}</nav>
+  <div class="sechead">
+    <div>
+      <p class="eyebrow">${esc(c.area)} · ريف دمشق</p>
+      <h1>${esc(c.h1)}</h1>
+    </div>
+    <div class="side"><p class="rcount">${nProp(items.length)}</p></div>
+  </div>
+  <p class="lead">${esc(desc)}</p>
+  <div class="grid">${items.map(x => cardHtml(x, "")).join("")}</div>
+  ${collectionLinks(cols, c.slug)}
+  <div class="actions" style="margin-top:var(--s5)">
+    <a class="btn btn-primary" target="_blank" rel="noopener" href="${wa(`مرحباً أستاذ محمد، بدوّر على ${c.h1}.`)}">استفسر على واتساب <span class="ar">←</span></a>
+    <a class="btn btn-ghost" href="index.html">كل العقارات</a>
+  </div>
+</main>
+${FOOT()}`;
+  return headHtml(c.title, desc, canonical, jsonld, extra) + body;
+}
+
 function indexPage(live) {
   const title = "عقارات يعفور وقرى الشام والصبورة | أراضٍ وفلل ومزارع للبيع - محمد خالد";
   const desc = `أراضٍ وفلل ومزارع وشقق للبيع في يعفور وقرى الشام والصبورة بريف دمشق. ${live.length} عقاراً متاحاً مع ${NAME}، ${ROLE} — مرافقة من المعاينة حتى التسجيل. واتساب ${PHONE_LOCAL}.`;
@@ -401,6 +497,7 @@ function indexPage(live) {
   </div>
   <div class="grid" id="listings-grid">${live.map(x => cardHtml(x, "")).join("")}</div>
   <p class="rnone" id="rnone" hidden>ما في عقار مطابق لهالبحث. جرّب توسّع الميزانية أو غيّر النوع.</p>
+  ${collectionLinks(collectionsAll(live))}
   <section class="why">
     <div class="why-grid">${whyHtml()}</div>
   </section>
@@ -430,7 +527,9 @@ ${FOOT()}
     `<script type="application/ld+json">${JSON.stringify(faq)}<\/script>`) + body;
 }
 function sitemapXml(live) {
-  const urls = [[BASE + "/", "1.0"]].concat(live.map(x => [`${BASE}/listing/${x.code}.html`, "0.8"]));
+  const urls = [[BASE + "/", "1.0"]]
+    .concat(collectionsAll(live).map(c => [`${BASE}/${c.slug}`, "0.9"]))
+    .concat(live.map(x => [`${BASE}/listing/${x.code}.html`, "0.8"]));
   return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     + urls.map(([u, p]) => `  <url><loc>${u}</loc><lastmod>${today()}</lastmod><priority>${p}</priority></url>\n`).join("")
     + "</urlset>\n";
@@ -780,19 +879,30 @@ async function publish() {
       "تحديث بيانات المخزون");
 
     say("جارٍ تجهيز صفحات الموقع…", "warn", true);
+    const cols = collectionsAll(live);
     const files = [
       { path: "data.json", content: JSON.stringify(publicData(live), null, 1) },
       { path: "index.html", content: indexPage(live) },
       { path: "sitemap.xml", content: sitemapXml(live) }
     ];
+    for (const c of cols) files.push({ path: c.slug, content: collectionPage(c, cols) });
     for (const x of live) files.push({ path: `listing/${x.code}.html`, content: listingPage(x, live) });
     for (const p in newBlobs) files.push({ path: p, b64: newBlobs[p] });
 
     /* صفحات عقارات ما عادت متاحة (انحذفت أو صارت موقوفة) تُشال من الموقع
        حتى ما يوصلها زبون من جوجل ويتصل على عقار مباع */
     const keep = new Set(live.map(x => `listing/${x.code}.html`));
+    /* كل أسماء صفحات التصفّح الممكنة — نحذف ما لم يعد منها مستحقّاً */
+    const colNames = new Set();
+    for (const a of AREA_ORDER) {
+      colNames.add(AREA_SLUG[a] + ".html");
+      for (const c of ["land", "villa", "farm", "apt"]) colNames.add(`${CAT_SLUG[c]}-${AREA_SLUG[a]}.html`);
+    }
+    const colKeep = new Set(cols.map(c => c.slug));
     const existing = await repoPaths(CFG.pub);
-    const deletes = existing.filter(p => p.startsWith("listing/") && p.endsWith(".html") && !keep.has(p));
+    const deletes = existing.filter(p =>
+      (p.startsWith("listing/") && p.endsWith(".html") && !keep.has(p)) ||
+      (colNames.has(p) && !colKeep.has(p)));
 
     say("جارٍ الرفع (" + files.length + " ملف"
       + (deletes.length ? " · حذف " + deletes.length : "") + ")…", "warn", true);

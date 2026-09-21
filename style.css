@@ -137,6 +137,15 @@ h3{font-size:var(--f6);color:var(--ink)}
 .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:var(--s2);margin:0 0 var(--s3)}
 .thumbs img{width:100%;height:96px;object-fit:cover;border-radius:var(--r1);border:1px solid var(--glass-line)}
 
+/* ===== تصفّح حسب المنطقة والنوع ===== */
+.browse{margin-top:var(--s7)}
+.browse h2{margin:0 0 var(--s4)}
+.browse-links{display:flex;flex-wrap:wrap;gap:var(--s2)}
+.browse-links a{display:inline-flex;align-items:center;padding:var(--s2) var(--s4);border-radius:var(--rf);
+  border:1px solid var(--glass-line);background:rgba(212,175,55,.1);color:var(--ink);
+  text-decoration:none;font-weight:700;font-size:var(--f3);min-height:44px}
+.browse-links a:hover{background:rgba(212,175,55,.24);color:var(--gold-light)}
+
 /* ===== ليش تتعامل معي ===== */
 .why{margin-top:var(--s7)}
 .why-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:var(--s4)}

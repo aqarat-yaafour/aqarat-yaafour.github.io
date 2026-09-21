@@ -1,6 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url><loc>https://aqarat-yaafour.github.io/</loc><lastmod>2026-09-21</lastmod><priority>1.0</priority></url>
+  <url><loc>https://aqarat-yaafour.github.io/yaafour.html</loc><lastmod>2026-09-21</lastmod><priority>0.9</priority></url>
+  <url><loc>https://aqarat-yaafour.github.io/land-yaafour.html</loc><lastmod>2026-09-21</lastmod><priority>0.9</priority></url>
+  <url><loc>https://aqarat-yaafour.github.io/villas-yaafour.html</loc><lastmod>2026-09-21</lastmod><priority>0.9</priority></url>
+  <url><loc>https://aqarat-yaafour.github.io/qura-alsham.html</loc><lastmod>2026-09-21</lastmod><priority>0.9</priority></url>
+  <url><loc>https://aqarat-yaafour.github.io/villas-qura-alsham.html</loc><lastmod>2026-09-21</lastmod><priority>0.9</priority></url>
   <url><loc>https://aqarat-yaafour.github.io/listing/MK-001.html</loc><lastmod>2026-09-21</lastmod><priority>0.8</priority></url>
   <url><loc>https://aqarat-yaafour.github.io/listing/MK-002.html</loc><lastmod>2026-09-21</lastmod><priority>0.8</priority></url>
   <url><loc>https://aqarat-yaafour.github.io/listing/MK-003.html</loc><lastmod>2026-09-21</lastmod><priority>0.8</priority></url>
