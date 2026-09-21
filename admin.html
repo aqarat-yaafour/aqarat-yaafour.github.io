@@ -1,0 +1,382 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>إدارة المخزون — محمد خالد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@700&family=Tajawal:wght@400;500;700;800&display=swap">
+<style>
+:root{
+  --metal:linear-gradient(135deg,#AA771C 0%,#D4AF37 18%,#FCF6BA 38%,#C9A13B 55%,#F5E7A1 72%,#B38728 100%);
+  --black:#0B0B0C;--ink:#F3EDE1;--ink-2:#E2D6B8;--muted:#CFC3A3;
+  --gold:#D4AF37;--gold-light:#F5E7A1;
+  --glass:rgba(212,175,55,.12);--glass-2:rgba(212,175,55,.2);--line:rgba(252,246,186,.32);
+  --hi:inset 0 1px 0 rgba(252,246,186,.3);--shadow:0 14px 40px rgba(0,0,0,.45);
+  --danger:#E8836B;--danger-bg:rgba(232,131,107,.14);--danger-line:rgba(232,131,107,.45);
+  --ok:#8FD49B;
+  --display:"Amiri","Times New Roman",serif;
+  --body:"Tajawal",-apple-system,"SF Arabic",Tahoma,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{direction:rtl;background:var(--black)}
+body{margin:0;background:var(--black);color:var(--ink);font-family:var(--body);font-size:16px;line-height:1.7;
+  padding-inline:16px;padding-block:20px 90px;min-height:100vh;position:relative;isolation:isolate;overflow-x:hidden}
+body::before,body::after{content:"";position:fixed;z-index:-1;border-radius:50%;pointer-events:none;filter:blur(60px)}
+body::before{width:46vmax;height:46vmax;top:-16vmax;right:-14vmax;background:#D4AF37;opacity:.34}
+body::after{width:40vmax;height:40vmax;bottom:-16vmax;left:-14vmax;background:#B38728;opacity:.28}
+img{max-width:100%}
+[hidden]{display:none!important}
+.wrap{max-width:1180px;margin-inline:auto}
+button,select,input,textarea{font-family:inherit;font-size:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.glass{background:var(--glass);border:1px solid var(--line);box-shadow:var(--hi),var(--shadow);
+  -webkit-backdrop-filter:blur(24px) saturate(160%);backdrop-filter:blur(24px) saturate(160%)}
+
+header.top{display:flex;flex-wrap:wrap;gap:14px 20px;align-items:center;justify-content:space-between;padding:20px 26px;border-radius:26px}
+header.top h1{font-family:var(--display);font-weight:700;font-size:clamp(25px,4.2vw,36px);margin:0;line-height:1.3;
+  background:var(--metal);-webkit-background-clip:text;background-clip:text;color:transparent}
+header.top .sub{margin:2px 0 0;color:var(--ink-2);font-size:14px}
+.top-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:10px 20px;
+  font-size:15px;font-weight:800;cursor:pointer;border:1px solid transparent;white-space:nowrap;transition:transform .15s,background-color .15s}
+.btn:active{transform:scale(.97)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.btn-primary{background:var(--metal);color:var(--black);box-shadow:0 6px 20px rgba(212,175,55,.25)}
+.btn-ghost{background:var(--glass-2);color:var(--ink);border-color:var(--line);box-shadow:var(--hi)}
+.btn-ghost:hover{background:rgba(212,175,55,.3)}
+.btn-danger{background:var(--danger-bg);color:var(--danger);border-color:var(--danger-line)}
+.btn-sm{padding:7px 14px;font-size:13.5px}
+
+/* إعداد أول مرة */
+.setup{max-width:660px;margin:6vh auto 0;padding:28px;border-radius:26px}
+.setup h2{font-family:var(--display);font-size:27px;margin:0 0 4px;color:var(--gold)}
+.setup p{color:var(--ink-2);font-size:14.5px;margin:0 0 16px;line-height:1.75}
+.setup ol{color:var(--ink-2);font-size:14.5px;line-height:1.9;padding-inline-start:20px;margin:0 0 16px}
+.setup b{color:var(--gold-light)}
+.setup code{background:rgba(0,0,0,.5);border:1px solid var(--line);border-radius:7px;padding:1px 7px;
+  font-size:13.5px;direction:ltr;display:inline-block}
+.setup a{color:var(--gold-light)}
+
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px;padding:10px 14px;border-radius:20px}
+.bar input[type=search]{flex:1;min-width:170px;background:rgba(0,0,0,.4);color:var(--ink);border:1px solid var(--line);
+  border-radius:999px;padding:8px 16px}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:rgba(212,175,55,.1);color:var(--ink);border-radius:999px;
+  padding:5px 14px;font-size:14px;font-weight:700;cursor:pointer;box-shadow:var(--hi)}
+.chip[aria-pressed="true"]{background:var(--metal);color:var(--black);border-color:transparent;box-shadow:none}
+.count{color:var(--ink-2);font-size:13.5px;font-weight:700;padding:14px 6px 10px}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:16px}
+.card{position:relative;border-radius:22px;border:1px solid var(--line);background:var(--glass);box-shadow:var(--hi)}
+.card:hover{background:rgba(212,175,55,.2)}
+.card.dirty{border-color:var(--gold);box-shadow:0 0 0 1px var(--gold),var(--hi)}
+.card-open{display:flex;flex-direction:column;gap:6px;padding:16px 18px;border-radius:22px;text-align:start;
+  cursor:pointer;color:inherit;width:100%;background:none;border:none;font:inherit}
+.card-cam{position:absolute;top:10px;inset-inline-start:10px;z-index:2;display:inline-flex;align-items:center;gap:5px;
+  background:rgba(20,18,13,.86);border:1px solid var(--line);color:var(--gold-light);border-radius:999px;
+  padding:6px 13px;font:800 12.5px/1 var(--body);cursor:pointer}
+.card-cam:hover{background:rgba(212,175,55,.35);color:var(--ink)}
+.row1{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
+.code{font:800 12px/1 var(--body);letter-spacing:.1em;direction:ltr;color:var(--gold-light);
+  background:rgba(212,175,55,.14);border:1px solid var(--line);padding:6px 10px;border-radius:999px}
+.tag{font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;border:1px solid var(--line);color:var(--ink-2)}
+.tag.hold{background:var(--danger-bg);color:var(--danger);border-color:var(--danger-line)}
+.tag.ask{background:rgba(212,175,55,.2);color:var(--gold-light)}
+.tag.new{background:var(--metal);color:var(--black);border-color:transparent}
+.thumb{margin:4px 0 2px;border-radius:14px;overflow:hidden;border:1px solid var(--line);aspect-ratio:16/10;background:rgba(0,0,0,.35)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.card h3{margin:2px 0 0;font-family:var(--display);font-size:22px;font-weight:700;line-height:1.35}
+.card .meta{font-size:13.5px;color:var(--muted);font-weight:700}
+.card .price{font-size:15px;font-weight:800;color:var(--gold-light);font-variant-numeric:tabular-nums}
+.empty{grid-column:1/-1;padding:44px 16px;text-align:center;color:var(--ink-2);font-weight:700}
+
+/* شريط النشر */
+.publish{position:fixed;inset-inline:0;bottom:0;z-index:30;display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;
+  justify-content:center;padding:14px 16px;padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));
+  background:rgba(14,12,9,.96);border-top:1px solid var(--line);
+  -webkit-backdrop-filter:blur(20px);backdrop-filter:blur(20px)}
+.publish .msg{font-weight:800;font-size:14.5px}
+.publish .msg.ok{color:var(--ok)}
+.publish .msg.bad{color:var(--danger)}
+.publish .msg.warn{color:var(--gold-light)}
+
+dialog{border:1px solid var(--line);padding:0;border-radius:28px;background:rgba(20,18,13,.94);color:var(--ink);
+  width:min(880px,calc(100vw - 20px));max-height:calc(100dvh - 20px);box-shadow:var(--hi),0 30px 80px rgba(0,0,0,.65);
+  -webkit-backdrop-filter:blur(30px) saturate(160%);backdrop-filter:blur(30px) saturate(160%)}
+dialog::backdrop{background:rgba(0,0,0,.6)}
+.dlg{padding:22px;overflow:auto;max-height:calc(100dvh - 20px);display:flex;flex-direction:column;gap:18px}
+.dlg-head{display:flex;align-items:center;justify-content:space-between;gap:12px;position:sticky;top:0;z-index:2;
+  background:rgba(20,18,13,.97);margin:-22px -22px 0;padding:18px 22px;border-radius:28px 28px 0 0}
+.dlg-head h2{margin:0;font-family:var(--display);font-size:25px;font-weight:700;color:var(--gold)}
+.x{background:rgba(212,175,55,.16);border:1px solid var(--line);color:var(--ink);width:38px;height:38px;
+  border-radius:50%;cursor:pointer;font-size:20px;line-height:1}
+fieldset{border:1px solid var(--line);border-radius:20px;padding:16px 18px 18px;margin:0;background:rgba(0,0,0,.22)}
+legend{padding:0 10px;font-size:13px;font-weight:800;letter-spacing:.04em;color:var(--gold)}
+fieldset.private{border-color:var(--danger-line);background:var(--danger-bg)}
+fieldset.private legend{color:var(--danger)}
+.note-private{font-size:13px;color:var(--ink-2);margin:0 0 14px;line-height:1.6}
+.fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.f{display:flex;flex-direction:column;gap:6px;min-width:0}
+.f.wide{grid-column:1/-1}
+.f label{font-size:13.5px;font-weight:800;color:var(--ink-2)}
+.hint{font-size:12.5px;color:var(--muted);font-weight:500;line-height:1.55}
+input[type=text],input[type=number],input[type=password],select,textarea{width:100%;background:rgba(0,0,0,.45);
+  color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
+input[type=number]{font-variant-numeric:tabular-nums}
+textarea{min-height:70px;resize:vertical}
+select{cursor:pointer}
+option{background:#16140E;color:var(--ink)}
+.seg-btn{display:flex;gap:6px;flex-wrap:wrap}
+.seg-btn button{border:1px solid var(--line);background:rgba(212,175,55,.1);color:var(--ink);border-radius:12px;
+  padding:9px 16px;font-weight:800;cursor:pointer;font-size:14.5px}
+.seg-btn button[aria-pressed="true"]{background:var(--metal);color:var(--black);border-color:transparent}
+.check{display:flex;align-items:center;gap:10px;padding:11px 14px;border:1px solid var(--line);border-radius:14px;
+  background:rgba(0,0,0,.3);cursor:pointer;font-weight:700;font-size:14.5px}
+.check input{width:19px;height:19px;accent-color:var(--gold);cursor:pointer;flex:none}
+.feats{display:flex;flex-wrap:wrap;gap:7px;padding:8px;border:1px solid var(--line);border-radius:14px;
+  background:rgba(0,0,0,.45);min-height:50px;align-items:flex-start}
+.feat{display:inline-flex;align-items:center;gap:7px;background:rgba(212,175,55,.18);border:1px solid var(--line);
+  border-radius:999px;padding:4px 6px 4px 12px;font-size:13.5px;font-weight:700}
+.feat button{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;line-height:1;padding:0 3px}
+.feats input{flex:1;min-width:130px;background:none;border:none;color:var(--ink);padding:6px 8px;outline:none}
+.photos{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.photos .hint{grid-column:1/-1;margin:0}
+.ph{position:relative;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:rgba(0,0,0,.4)}
+.ph img{width:100%;aspect-ratio:4/3;object-fit:cover;display:block}
+.ph .main-tag{position:absolute;top:8px;inset-inline-start:8px;background:var(--metal);color:var(--black);
+  font-size:11.5px;font-weight:800;padding:2px 10px;border-radius:999px}
+.ph-act{display:flex;gap:6px;padding:7px;background:rgba(0,0,0,.55)}
+.ph-act button{flex:1;background:rgba(212,175,55,.16);border:1px solid var(--line);color:var(--ink);border-radius:9px;
+  padding:5px 4px;font-size:12px;font-weight:700;cursor:pointer;font-family:inherit}
+.ph-act button.del{background:var(--danger-bg);color:var(--danger);border-color:var(--danger-line)}
+.photo-actions{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;margin-top:12px}
+.photo-actions .hint{flex:1;min-width:180px}
+.upstat{font-size:13.5px;font-weight:800;color:var(--gold-light)}
+.upstat.bad{color:var(--danger)}
+.total{padding:13px 18px;border-radius:16px;background:rgba(212,175,55,.14);border:1px solid var(--line);
+  font-weight:800;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;font-variant-numeric:tabular-nums}
+.total .big{font-family:var(--display);font-size:27px;color:var(--gold-light)}
+.total .lbl{font-size:13.5px;color:var(--muted);font-weight:700}
+.dlg-foot{display:flex;flex-wrap:wrap;gap:10px;align-items:center;position:sticky;bottom:0;
+  background:rgba(20,18,13,.97);margin:0 -22px -22px;padding:16px 22px;border-radius:0 0 28px 28px}
+.dlg-foot .spacer{flex:1}
+.err{color:var(--danger);font-weight:700;font-size:14px;flex-basis:100%}
+.state{padding:50px 20px;text-align:center;color:var(--ink-2);font-weight:700}
+@media (max-width:640px){
+  header.top{padding:18px 20px;border-radius:22px}
+  .dlg{padding:16px;gap:15px}
+  .dlg-head{margin:-16px -16px 0;padding:14px 16px}
+  .dlg-foot{margin:0 -16px -16px;padding:14px 16px}
+  .dlg-foot .btn{flex:1}
+  .setup{padding:22px;margin-top:3vh}
+}
+@media (prefers-reduced-motion:reduce){.btn{transition:none}}
+</style>
+</head>
+<body>
+
+<!-- ===== شاشة الإعداد ===== -->
+<section class="setup glass" id="setup" hidden>
+  <h2>ربط اللوحة بموقعك</h2>
+  <p>هالصفحة بتكتب مباشرة على مستودعاتك بـGitHub. بدها <b>مفتاح وصول</b> بتنشئه إنت مرة وحدة. المفتاح بينحفظ <b>بمتصفحك بس</b> — ما بينرسل لأي جهة تانية.</p>
+  <ol>
+    <li>افتح <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">صفحة إنشاء المفتاح</a> (Fine-grained token)</li>
+    <li><b>Token name</b>: أي اسم، مثلاً <code>admin</code></li>
+    <li><b>Expiration</b>: اختار <code>No expiration</code> حتى ما يوقف بعد فترة</li>
+    <li><b>Repository access</b> ← <code>Only select repositories</code> ← اختار المستودعين</li>
+    <li><b>Permissions</b> ← <code>Repository permissions</code> ← <code>Contents</code> ← <code>Read and write</code></li>
+    <li>اضغط <code>Generate token</code>، وانسخ المفتاح والصقه تحت</li>
+  </ol>
+  <div class="fields">
+    <div class="f wide">
+      <label for="s_token">المفتاح (Token)</label>
+      <input type="password" id="s_token" dir="ltr" autocomplete="off" placeholder="github_pat_...">
+    </div>
+    <div class="f">
+      <label for="s_owner">اسم حسابك</label>
+      <input type="text" id="s_owner" dir="ltr" value="aqarat-yaafour" autocomplete="off">
+    </div>
+    <div class="f">
+      <label for="s_pub">مستودع الموقع (عام)</label>
+      <input type="text" id="s_pub" dir="ltr" value="aqarat-yaafour.github.io" autocomplete="off">
+    </div>
+    <div class="f wide">
+      <label for="s_priv">المستودع الخاص (للمعلومات السرية)</label>
+      <input type="text" id="s_priv" dir="ltr" value="mk-inventory" autocomplete="off">
+      <span class="hint">أنشئه من <a href="https://github.com/new" target="_blank" rel="noopener">هون</a> باسم <code>mk-inventory</code> واختار <b>Private</b> وأشّر على <b>Add a README file</b>.</span>
+    </div>
+  </div>
+  <div class="dlg-foot" style="position:static;background:none;margin:14px 0 0;padding:0;border-radius:0">
+    <button class="btn btn-primary" type="button" id="s_go">اتصل</button>
+    <span class="err" id="s_err" hidden></span>
+  </div>
+</section>
+
+<!-- ===== اللوحة ===== -->
+<div class="wrap" id="app" hidden>
+  <header class="top glass">
+    <div>
+      <h1>مخزون العقارات</h1>
+      <p class="sub">محمد خالد · مستشار عقاري — يعفور وقرى الشام</p>
+    </div>
+    <div class="top-actions">
+      <button class="btn btn-primary" id="addBtn" type="button">+ عقار جديد</button>
+      <button class="btn btn-ghost btn-sm" id="outBtn" type="button">فصل</button>
+    </div>
+  </header>
+
+  <div class="bar glass">
+    <input type="search" id="q" placeholder="ابحث بالكود أو العنوان أو الميزات…" aria-label="بحث">
+    <div class="seg" id="filters" role="group" aria-label="تصفية">
+      <button class="chip" type="button" data-f="all" aria-pressed="true">الكل</button>
+      <button class="chip" type="button" data-f="أرض" aria-pressed="false">أراضٍ</button>
+      <button class="chip" type="button" data-f="فيلا" aria-pressed="false">فلل</button>
+      <button class="chip" type="button" data-f="مزرعة" aria-pressed="false">مزارع</button>
+      <button class="chip" type="button" data-f="شقة" aria-pressed="false">شقق</button>
+      <button class="chip" type="button" data-f="موقوف" aria-pressed="false">الموقوف</button>
+    </div>
+  </div>
+
+  <div class="count" id="count"></div>
+  <main class="grid" id="grid"></main>
+</div>
+
+<div class="state" id="loading">جارٍ الاتصال بمستودعاتك…</div>
+
+<div class="publish" id="pubBar" hidden>
+  <span class="msg" id="pubMsg"></span>
+  <button class="btn btn-primary" id="pubBtn" type="button">نشر على الموقع</button>
+  <button class="btn btn-ghost btn-sm" id="dropBtn" type="button" hidden>تراجع عن التعديلات</button>
+</div>
+
+<!-- نافذة الصور السريعة -->
+<dialog id="photoDlg" aria-labelledby="qTitle">
+  <div class="dlg">
+    <div class="dlg-head">
+      <h2 id="qTitle">الصور</h2>
+      <button class="x" type="button" id="qClose" aria-label="إغلاق">×</button>
+    </div>
+    <p class="hint" id="qSub" style="margin:0"></p>
+    <div class="photos" id="qPhotoBox"></div>
+    <div class="photo-actions">
+      <label class="btn btn-primary" for="q_photos">📷 أضف صور</label>
+      <input type="file" id="q_photos" accept="image/*" multiple hidden>
+      <span class="upstat" id="qUpstat" hidden></span>
+    </div>
+    <p class="hint" style="margin:0">من الموبايل بيفتحلك الكاميرا أو الاستوديو. بتظهر على الموقع بعد ما تضغط «نشر».</p>
+    <div class="dlg-foot"><button class="btn btn-ghost" type="button" id="qDone">تمّ</button></div>
+  </div>
+</dialog>
+
+<!-- نافذة العقار -->
+<dialog id="dlg" aria-labelledby="dlgTitle">
+  <form class="dlg" id="form" method="dialog">
+    <div class="dlg-head">
+      <h2 id="dlgTitle">عقار جديد</h2>
+      <button class="x" type="button" id="closeBtn" aria-label="إغلاق">×</button>
+    </div>
+
+    <fieldset>
+      <legend>الأساسيات</legend>
+      <div class="fields">
+        <div class="f"><label for="f_code">الكود</label>
+          <input type="text" id="f_code" dir="ltr" autocomplete="off" placeholder="MK-022"></div>
+        <div class="f"><label for="f_cat">النوع</label>
+          <select id="f_cat"><option>أرض</option><option>فيلا</option><option>مزرعة</option><option>شقة</option></select></div>
+        <div class="f"><label for="f_area">المنطقة</label>
+          <select id="f_area"><option>يعفور</option><option>قرى الشام</option></select></div>
+        <div class="f wide"><label for="f_title">العنوان</label>
+          <input type="text" id="f_title" placeholder="أرض مسوّرة مع بئر" autocomplete="off">
+          <span class="hint">وصف قصير بيظهر للمشتري. بلا اسم شارع.</span></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>المساحة</legend>
+      <div class="fields">
+        <div class="f"><label for="f_land">مساحة الأرض</label>
+          <div class="seg-btn" id="unitSeg" role="group" aria-label="وحدة المساحة">
+            <button type="button" data-u="dunam" aria-pressed="true">دنم</button>
+            <button type="button" data-u="m2" aria-pressed="false">م²</button></div>
+          <input type="number" id="f_land" min="0" step="any" placeholder="5">
+          <span class="hint" id="landHint">اكتب 5 يعني 5 دنم.</span></div>
+        <div class="f"><label for="f_bua">مساحة البناء (م²)</label>
+          <input type="number" id="f_bua" min="0" step="any" placeholder="250">
+          <span class="hint">للفلل والشقق. اتركها فاضية للأراضي.</span></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>السعر</legend>
+      <div class="fields">
+        <div class="f"><label>طريقة التسعير</label>
+          <div class="seg-btn" id="modeSeg" role="group" aria-label="طريقة التسعير">
+            <button type="button" data-m="للدنم" aria-pressed="false">سعر الدنم</button>
+            <button type="button" data-m="مقطوع" aria-pressed="true">سعر مقطوع</button></div></div>
+        <div class="f"><label for="f_price">السعر بالدولار</label>
+          <input type="number" id="f_price" min="0" step="any" placeholder="300000"></div>
+      </div>
+      <div class="total" style="margin-top:14px"><span class="lbl">الإجمالي:</span><span class="big" id="totalVal">—</span></div>
+      <div class="fields" style="margin-top:14px">
+        <label class="check" for="f_nego"><input type="checkbox" id="f_nego"> قابل للتفاوض</label>
+        <label class="check" for="f_conf"><input type="checkbox" id="f_conf" checked> السعر مؤكد</label>
+      </div>
+      <span class="hint" style="display:block;margin-top:8px">لو شلت «السعر مؤكد»، بينشر بلا رقم ويظهر «السعر عند التواصل».</span>
+    </fieldset>
+
+    <fieldset>
+      <legend>التفاصيل</legend>
+      <div class="fields">
+        <div class="f"><label for="f_papers">نوع الأوراق</label>
+          <select id="f_papers"><option value="">غير محدد</option><option>طابو أخضر</option>
+            <option>حكم محكمة</option><option>وكالة</option></select></div>
+        <div class="f"><label for="f_status">الحالة</label>
+          <select id="f_status"><option>متاح</option><option>موقوف</option></select>
+          <span class="hint">«موقوف» ما بيظهر على الموقع نهائياً.</span></div>
+        <div class="f wide"><label for="f_featIn">الميزات</label>
+          <div class="feats" id="featBox"><input type="text" id="f_featIn" placeholder="اكتب ميزة واضغط Enter" autocomplete="off"></div></div>
+        <div class="f wide"><label for="f_note">ملاحظة للمشتري</label>
+          <input type="text" id="f_note" placeholder="البناء على العظم" autocomplete="off"></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>الصور</legend>
+      <div class="photos" id="photoBox"></div>
+      <div class="photo-actions">
+        <label class="btn btn-ghost" for="f_photos">+ أضف صور</label>
+        <input type="file" id="f_photos" accept="image/*" multiple hidden>
+        <span class="upstat" id="upstat" hidden></span>
+        <span class="hint">بتنضغط قبل الرفع حتى يفتح الموقع بسرعة. أول صورة هي الرئيسية.</span>
+      </div>
+    </fieldset>
+
+    <fieldset class="private">
+      <legend>🔒 خاص — ما بينشر أبداً</legend>
+      <p class="note-private">بينحفظ بمستودعك الخاص. ما بيوصل للموقع ولا بيشوفه حدا غيرك.</p>
+      <div class="fields">
+        <div class="f"><label for="p_place">الموقع الدقيق</label><input type="text" id="p_place" placeholder="شارع الربيع" autocomplete="off"></div>
+        <div class="f"><label for="p_by">من طرف</label><input type="text" id="p_by" placeholder="أبو عادل" autocomplete="off"></div>
+        <div class="f"><label for="p_comm">العمولة</label><input type="text" id="p_comm" autocomplete="off"></div>
+        <div class="f wide"><label for="p_notes">ملاحظات خاصة</label><textarea id="p_notes"></textarea></div>
+      </div>
+    </fieldset>
+
+    <div class="dlg-foot">
+      <button class="btn btn-primary" type="button" id="saveBtn">حفظ</button>
+      <button class="btn btn-ghost" type="button" id="cancelBtn">إلغاء</button>
+      <span class="spacer"></span>
+      <button class="btn btn-danger" type="button" id="delBtn" hidden>حذف العقار</button>
+      <span class="err" id="err" hidden></span>
+    </div>
+  </form>
+</dialog>
+
+<script src="admin.js"></script>
+</body>
+</html>
