@@ -211,7 +211,7 @@ function listingPage(x, live) {
     offers: offer
   };
   if ((x.photos || []).length) jsonld.image = x.photos.map(p => BASE + "/" + p);
-  jsonld.broker = { "@type": "RealEstateAgent", name: NAME, telephone: "+" + PHONE_INTL, areaServed: ["يعفور", "قرى الشام", "ريف دمشق"], url: BASE + "/" };
+  jsonld.broker = { "@type": "RealEstateAgent", name: NAME, telephone: "+" + PHONE_INTL, areaServed: ["يعفور", "قرى الشام", "الصبورة", "ريف دمشق"], url: BASE + "/" };
   const crumbs = {
     "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
       { "@type": "ListItem", position: 1, name: "العقارات", item: BASE + "/" },
@@ -248,9 +248,10 @@ function listingPage(x, live) {
 ${FOOT()}`;
   return headHtml(title, desc, canonical, jsonld, extra, ogImage(x)) + body;
 }
-const AREAS = ["يعفور", "قرى الشام", "ريف دمشق"];
+const AREA_ORDER = ["يعفور", "قرى الشام", "الصبورة"];   /* مناطق العقارات المسموحة */
+const AREAS = ["يعفور", "قرى الشام", "الصبورة", "ريف دمشق"];
 const WHY = [
-  ["pin", "خبرة في المنطقة", "أعمل في يعفور وقرى الشام ومحيطهما قرب الصبورة، وأعرف عقاراتها وأسعارها عن قرب."],
+  ["pin", "خبرة في المنطقة", "أعمل في يعفور وقرى الشام والصبورة بريف دمشق، وأعرف عقاراتها وأسعارها عن قرب."],
   ["globe", "مرافقة المغتربين", "أساعد المشترين الذين لا يستطيعون الحضور: صور العقار وأوراقه ومتابعة عن بُعد."],
   ["doc", "تدقيق الأوراق", "التحقق من أوراق العقار ومتابعة الإجراءات حتى التسجيل."],
   ["tools", "تقدير كلفة البناء", "أتابع أعمال البناء والإكساء، فأقدّر لك الكلفة قبل الشراء."]
@@ -330,8 +331,9 @@ const SEARCH_JS = `
   apply();
 })();
 `;
-function searchHtml() {
-  const optsArea = ["يعفور", "قرى الشام"].map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join("");
+function searchHtml(live) {
+  const optsArea = AREA_ORDER.filter(a => live.some(x => x.area === a))
+    .map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join("");
   const optsCat = ["land", "villa", "farm", "apt"].map(k => `<option value="${k}">${CAT_AR[k]}</option>`).join("");
   const budgets = [["", "كل الميزانيات"], ["0-500000", "حتى 500 ألف $"],
     ["500000-1000000", "500 ألف — مليون $"], ["1000000-3000000", "1 — 3 مليون $"],
@@ -349,8 +351,8 @@ function searchHtml() {
 }
 
 function indexPage(live) {
-  const title = "عقارات يعفور وقرى الشام | أراضٍ وفلل ومزارع للبيع - محمد خالد";
-  const desc = `أراضٍ وفلل ومزارع وشقق للبيع في يعفور وقرى الشام بريف دمشق، على مقربة من الصبورة. ${live.length} عقاراً متاحاً مع ${NAME}، ${ROLE} — مرافقة من المعاينة حتى التسجيل. واتساب ${PHONE_LOCAL}.`;
+  const title = "عقارات يعفور وقرى الشام والصبورة | أراضٍ وفلل ومزارع للبيع - محمد خالد";
+  const desc = `أراضٍ وفلل ومزارع وشقق للبيع في يعفور وقرى الشام والصبورة بريف دمشق. ${live.length} عقاراً متاحاً مع ${NAME}، ${ROLE} — مرافقة من المعاينة حتى التسجيل. واتساب ${PHONE_LOCAL}.`;
   const jsonld = {
     "@context": "https://schema.org", "@type": "RealEstateAgent", name: NAME, jobTitle: ROLE,
     url: BASE + "/", telephone: "+" + PHONE_INTL, image: BASE + "/img/mohammad-khaled.jpg", description: desc,
@@ -370,7 +372,7 @@ function indexPage(live) {
   <div class="hero-bg"${heroStyle(live)}></div>
   <div class="hero-inner">
     <div class="hero-txt">
-      <p class="eyebrow">يعفور · قرى الشام · قرب الصبورة</p>
+      <p class="eyebrow">يعفور · قرى الشام · الصبورة</p>
       <h1>عقارات يعفور<br><span class="g">وقرى الشام</span></h1>
       <p class="lead">أراضٍ وفلل ومزارع وشقق للبيع، معاينة على الأرض.<br>مرافقة من المعاينة حتى التسجيل.</p>
       <div class="actions">
@@ -385,7 +387,7 @@ function indexPage(live) {
     ${featureHtml(live)}
   </div>
 </section>
-<div class="wrap">${searchHtml()}</div>
+<div class="wrap">${searchHtml(live)}</div>
 <main class="wrap">
   <div class="sechead">
     <div>
@@ -404,11 +406,11 @@ function indexPage(live) {
   </section>
   <section id="about" class="about glass">
     <h2>من أنا</h2>
-    <p>أنا ${NAME}، ${ROLE} أعمل في يعفور وقرى الشام بريف دمشق، وهي المنطقة الملاصقة للصبورة. أساعد المشترين، ومنهم المغتربون الذين لا يستطيعون الحضور، على اختيار الأرض أو الفيلا المناسبة، والتحقق من الأوراق، ومتابعة الإجراءات حتى التسجيل. وإلى جانب الوساطة العقارية أتابع أعمال البناء والإكساء، فأستطيع تقدير كلفة البناء أو الإكساء قبل الشراء.</p>
+    <p>أنا ${NAME}، ${ROLE} أعمل في يعفور وقرى الشام والصبورة بريف دمشق. أساعد المشترين، ومنهم المغتربون الذين لا يستطيعون الحضور، على اختيار الأرض أو الفيلا المناسبة، والتحقق من الأوراق، ومتابعة الإجراءات حتى التسجيل. وإلى جانب الوساطة العقارية أتابع أعمال البناء والإكساء، فأستطيع تقدير كلفة البناء أو الإكساء قبل الشراء.</p>
     <h2>أسئلة متكررة</h2>
     <dl class="faq">
-      <dt>في أي مناطق تعمل؟</dt><dd>يعفور وقرى الشام وما حولهما في ريف دمشق.</dd>
-      <dt>هل عندك عقارات في الصبورة؟</dt><dd>عقاراتي في يعفور وقرى الشام، وهما ملاصقتان للصبورة على أوتوستراد دمشق. إذا بتدوّر على أرض أو فيلا بهالمنطقة تواصل معي وبشوفلك المتوفر.</dd>
+      <dt>في أي مناطق تعمل؟</dt><dd>يعفور وقرى الشام والصبورة وما حولها في ريف دمشق.</dd>
+      <dt>هل عندك عقارات في الصبورة؟</dt><dd>الصبورة من مناطق عملي. المعروض على الموقع اليوم في يعفور وقرى الشام الملاصقتين لها — تواصل معي وبشوفلك المتوفر بالصبورة.</dd>
       <dt>شو المتوفر عندك؟</dt><dd>أراضٍ زراعية وسكنية ومرخّصة، وفلل ومزارع وشقق، بمساحات من دنم حتى 100 دنم.</dd>
       <dt>هل أستطيع الشراء وأنا خارج سوريا؟</dt><dd>نعم. أرسل لك صور العقار وأوراقه، وأرافق الإجراءات حتى التسجيل حسب ما يسمح به القانون ووكالتك.</dd>
       <dt>كيف أستفسر عن عقار؟</dt><dd>افتح صفحة العقار وأرسل رسالة واتساب فيها كود العقار، مثل MK-012.</dd>
@@ -419,8 +421,8 @@ ${FOOT()}
 <script>${SEARCH_JS}<\/script>`;
   const faq = {
     "@context": "https://schema.org", "@type": "FAQPage", mainEntity: [
-      { "@type": "Question", name: "في أي مناطق يعمل محمد خالد؟", acceptedAnswer: { "@type": "Answer", text: "يعفور وقرى الشام وما حولهما في ريف دمشق." } },
-      { "@type": "Question", name: "هل توجد عقارات في الصبورة؟", acceptedAnswer: { "@type": "Answer", text: "العقارات في يعفور وقرى الشام، وهما ملاصقتان للصبورة في ريف دمشق." } },
+      { "@type": "Question", name: "في أي مناطق يعمل محمد خالد؟", acceptedAnswer: { "@type": "Answer", text: "يعفور وقرى الشام والصبورة وما حولها في ريف دمشق." } },
+      { "@type": "Question", name: "هل توجد عقارات في الصبورة؟", acceptedAnswer: { "@type": "Answer", text: "الصبورة من مناطق العمل. المعروض حالياً في يعفور وقرى الشام الملاصقتين لها في ريف دمشق." } },
       { "@type": "Question", name: "ما العقارات المتوفرة في يعفور وقرى الشام؟", acceptedAnswer: { "@type": "Answer", text: "أراضٍ زراعية وسكنية ومرخّصة، وفلل ومزارع وشقق، بمساحات من دنم حتى 100 دنم." } },
       { "@type": "Question", name: "هل يمكن الشراء من خارج سوريا؟", acceptedAnswer: { "@type": "Answer", text: "نعم، مع إرسال صور العقار وأوراقه ومرافقة الإجراءات حتى التسجيل حسب القانون والوكالة." } }]
   };
