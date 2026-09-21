@@ -137,6 +137,23 @@ h3{font-size:var(--f6);color:var(--ink)}
 .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:var(--s2);margin:0 0 var(--s3)}
 .thumbs img{width:100%;height:96px;object-fit:cover;border-radius:var(--r1);border:1px solid var(--glass-line)}
 
+/* ===== دوّرلي على عقار ===== */
+.request{margin-top:var(--s7);padding:var(--s6) var(--s5);border-radius:var(--r3);
+  display:grid;grid-template-columns:minmax(240px,1fr) minmax(280px,1.2fr);gap:var(--s6)}
+.request h2{margin:var(--s1) 0 var(--s2);color:var(--ink)}
+.request .lead{margin:0;font-size:var(--f3)}
+.request .fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--s3)}
+.request .sf{display:flex;flex-direction:column;gap:var(--s1)}
+.request .sf.wide{grid-column:1/-1}
+.request label{font-size:var(--f1);font-weight:800;color:var(--gold);letter-spacing:.02em}
+.request select,.request input{width:100%;background:rgba(0,0,0,.45);color:var(--ink);
+  border:1px solid var(--glass-line);border-radius:var(--r1);padding:var(--s3) var(--s4);
+  font-family:inherit;font-size:var(--f3);font-weight:700;min-height:44px}
+.request select{cursor:pointer}
+.request option{background:#16140E;color:var(--ink)}
+.request .btn{margin-top:var(--s4);width:100%;min-height:48px;cursor:pointer;font-family:inherit}
+@media (max-width:760px){.request{grid-template-columns:1fr;padding:var(--s5) var(--s4);gap:var(--s4)}}
+
 /* ===== تصفّح حسب المنطقة والنوع ===== */
 .browse{margin-top:var(--s7)}
 .browse h2{margin:0 0 var(--s4)}

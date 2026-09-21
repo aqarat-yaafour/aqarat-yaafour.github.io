@@ -243,11 +243,13 @@ function listingPage(x, live) {
     <div class="actions">
       <a class="btn btn-primary" target="_blank" rel="noopener" href="${wa(`مرحباً أستاذ محمد، أستفسر عن العقار ${x.code} (${x.title} - ${x.area}).`)}">استفسر على واتساب</a>
       <a class="btn btn-ghost" href="tel:+${PHONE_INTL}" dir="ltr">${PHONE_LOCAL}</a>
+      ${shareHtml(x)}
     </div>
   </article>
   ${rel.length ? `<section class="related"><h2>عقارات مشابهة</h2><div class="grid">${rel.map(y => cardHtml(y, "../")).join("")}</div></section>` : ""}
 </main>
-${FOOT()}`;
+${FOOT()}
+<script>${SHARE_JS}<\/script>`;
   return headHtml(title, desc, canonical, jsonld, extra, ogImage(x)) + body;
 }
 const AREA_ORDER = ["يعفور", "قرى الشام", "الصبورة"];   /* مناطق العقارات المسموحة */
@@ -350,6 +352,77 @@ function searchHtml(live) {
       <select id="fBudget">${optsB}</select></div>
     <button class="btn btn-primary" type="button" id="fGo">بحث</button>
   </form>`;
+}
+
+/* ===== زر المشاركة (مطابق لـ SHARE_JS / share_html في build_site.py) ===== */
+const SHARE_JS = `
+(function(){
+  var b=document.getElementById('shareBtn'); if(!b) return;
+  var txt=b.getAttribute('data-txt'), url=location.href;
+  b.addEventListener('click',function(){
+    if(navigator.share){
+      navigator.share({title:document.title,text:txt,url:url}).catch(function(){});
+      return;
+    }
+    window.open('https://wa.me/?text='+encodeURIComponent(txt+'\\n'+url),'_blank','noopener');
+  });
+})();
+`;
+function shareHtml(x) {
+  const [n, u] = sizeOf(x), [main, unit2] = priceTxt(x);
+  const txt = `${x.title} في ${x.area}\n${n} ${u} · ${main}${unit2 ? " " + unit2 : ""}\nكود ${x.code}`;
+  return `<button class="btn btn-ghost" type="button" id="shareBtn" `
+    + `data-txt="${esc(txt)}">شارك العقار</button>`;
+}
+
+/* ===== نموذج «دوّرلي على عقار» ===== */
+const REQUEST_JS = `
+(function(){
+  var f=document.getElementById('reqForm'); if(!f) return;
+  var go=document.getElementById('reqGo');
+  function val(id){var e=document.getElementById(id);return e.value;}
+  go.addEventListener('click',function(){
+    var lines=['مرحباً أستاذ محمد، بدوّر على عقار:'];
+    var map=[['reqCat','النوع'],['reqArea','المنطقة'],['reqSize','المساحة'],['reqBudget','الميزانية']];
+    for(var i=0;i<map.length;i++){
+      var v=val(map[i][0]);
+      if(v) lines.push('▪️ '+map[i][1]+': '+v);
+    }
+    var note=val('reqNote').trim();
+    if(note) lines.push('▪️ ملاحظة: '+note);
+    window.open('https://wa.me/963996606813?text='+encodeURIComponent(lines.join('\\n')),'_blank','noopener');
+  });
+})();
+`;
+function requestHtml() {
+  const cats = ["أرض", "فيلا", "مزرعة", "شقة"].map(v => `<option value="${v}">${v}</option>`).join("");
+  const areas = AREA_ORDER.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join("");
+  const sizes = ["حتى دنم", "1 — 5 دنم", "5 — 10 دنم", "أكثر من 10 دنم"];
+  const optsSize = sizes.map(v => `<option value="${v}">${v}</option>`).join("");
+  const budgets = ["حتى 500 ألف $", "500 ألف — مليون $", "1 — 3 مليون $", "أكثر من 3 مليون $"];
+  const optsB = budgets.map(v => `<option value="${v}">${v}</option>`).join("");
+  return `<section class="request glass" id="request">
+    <div>
+      <p class="eyebrow">ما لقيت طلبك؟</p>
+      <h2>دوّرلي على عقار</h2>
+      <p class="lead">حدّد اللي بتدوّر عليه وابعتلي — وإذا إجاني عقار يناسبك بخبّرك أول واحد.</p>
+    </div>
+    <form id="reqForm" onsubmit="return false">
+      <div class="fields">
+        <div class="sf"><label for="reqCat">النوع</label>
+          <select id="reqCat"><option value="">أي نوع</option>${cats}</select></div>
+        <div class="sf"><label for="reqArea">المنطقة</label>
+          <select id="reqArea"><option value="">أي منطقة</option>${areas}</select></div>
+        <div class="sf"><label for="reqSize">المساحة</label>
+          <select id="reqSize"><option value="">أي مساحة</option>${optsSize}</select></div>
+        <div class="sf"><label for="reqBudget">الميزانية</label>
+          <select id="reqBudget"><option value="">أي ميزانية</option>${optsB}</select></div>
+        <div class="sf wide"><label for="reqNote">ملاحظة (اختياري)</label>
+          <input type="text" id="reqNote" placeholder="مثلاً: قريبة من الأوتوستراد، أو فيها بئر ماء"></div>
+      </div>
+      <button class="btn btn-primary" type="button" id="reqGo">ابعت الطلب على واتساب <span class="ar">←</span></button>
+    </form>
+  </section>`;
 }
 
 /* ===== صفحات التصفّح (مطابقة لـ collections_all في build_site.py) ===== */
@@ -496,8 +569,9 @@ function indexPage(live) {
     </div>
   </div>
   <div class="grid" id="listings-grid">${live.map(x => cardHtml(x, "")).join("")}</div>
-  <p class="rnone" id="rnone" hidden>ما في عقار مطابق لهالبحث. جرّب توسّع الميزانية أو غيّر النوع.</p>
+  <p class="rnone" id="rnone" hidden>ما في عقار مطابق لهالبحث. جرّب توسّع الميزانية، أو <a href="#request">ابعتلي طلبك</a> وبدوّرلك.</p>
   ${collectionLinks(collectionsAll(live))}
+  ${requestHtml()}
   <section class="why">
     <div class="why-grid">${whyHtml()}</div>
   </section>
@@ -515,7 +589,7 @@ function indexPage(live) {
   </section>
 </main>
 ${FOOT()}
-<script>${SEARCH_JS}<\/script>`;
+<script>${SEARCH_JS}${REQUEST_JS}<\/script>`;
   const faq = {
     "@context": "https://schema.org", "@type": "FAQPage", mainEntity: [
       { "@type": "Question", name: "في أي مناطق يعمل محمد خالد؟", acceptedAnswer: { "@type": "Answer", text: "يعفور وقرى الشام والصبورة وما حولها في ريف دمشق." } },
