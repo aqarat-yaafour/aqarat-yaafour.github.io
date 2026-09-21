@@ -628,6 +628,243 @@ function publicData(live) {
   });
 }
 
+/* ===================== بطاقة المنشور 1080×1080 =====================
+   منقولة عن مولّد الكتالوج القديم بنفس التصميم المعتمد. */
+function rrect(ctx, x, y, w, h, r) {
+  ctx.beginPath(); ctx.moveTo(x + r, y);
+  ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r);
+  ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath();
+}
+function glowBlob(ctx, cx, cy, r, color, alpha) {
+  const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+  g.addColorStop(0, color); g.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.save(); ctx.globalAlpha = alpha; ctx.fillStyle = g;
+  ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r); ctx.restore();
+}
+function glassPanel(ctx, x, y, w, h, r, strength) {
+  ctx.save();
+  ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 44; ctx.shadowOffsetY = 16;
+  ctx.fillStyle = `rgba(28,24,14,${.35 + strength * .4})`; rrect(ctx, x, y, w, h, r); ctx.fill();
+  ctx.restore();
+  ctx.fillStyle = `rgba(212,175,55,${strength * .55})`; rrect(ctx, x, y, w, h, r); ctx.fill();
+  const sheen = ctx.createLinearGradient(x, y, x, y + h);
+  sheen.addColorStop(0, "rgba(252,246,186,.16)"); sheen.addColorStop(.4, "rgba(252,246,186,0)");
+  ctx.fillStyle = sheen; rrect(ctx, x, y, w, h, r); ctx.fill();
+  ctx.strokeStyle = "rgba(252,246,186,.42)"; ctx.lineWidth = 2.5; rrect(ctx, x, y, w, h, r); ctx.stroke();
+}
+function metalGrad(ctx, x0, y0, x1, y1) {
+  const g = ctx.createLinearGradient(x0, y0, x1, y1);
+  [[0, "#AA771C"], [.18, "#D4AF37"], [.38, "#FCF6BA"], [.55, "#C9A13B"], [.72, "#F5E7A1"], [1, "#B38728"]]
+    .forEach(([o, c]) => g.addColorStop(o, c));
+  return g;
+}
+function wrapText(ctx, text, maxW) {
+  const words = String(text).split(" "), lines = []; let line = "";
+  for (const w of words) {
+    const t = line ? line + " " + w : w;
+    if (ctx.measureText(t).width > maxW && line) { lines.push(line); line = w; } else line = t;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+function fitLine(ctx, text, maxW) {
+  if (ctx.measureText(text).width <= maxW) return text;
+  const parts = text.split(" · ");
+  while (parts.length > 1 && ctx.measureText(parts.join(" · ")).width > maxW) parts.pop();
+  return parts.join(" · ");
+}
+
+let avatarImg = null;
+function loadAvatar() {
+  if (avatarImg) return Promise.resolve(avatarImg);
+  return new Promise(res => {
+    const im = new Image();
+    im.onload = () => { avatarImg = im; res(im); };
+    im.onerror = () => res(null);
+    im.src = "img/mohammad-khaled.jpg";
+  });
+}
+
+function postCaption(x) {
+  const [n, u] = sizeOf(x), [main, unit2, total] = priceTxt(x);
+  const tags = { land: "#أراضي_للبيع", villa: "#فلل_للبيع", farm: "#مزارع_للبيع", apt: "#شقق_للبيع" };
+  const ask = x.confirmed === false;
+  const priceLine = ask ? "السعر عند التواصل" : (unit2 === "للدنم" ? `${main} للدنم` : main);
+  const lines = [
+    `للبيع | ${n} ${u} في ${x.area}: ${x.title} | ${priceLine}`,
+    ``,
+    `• المساحة: ${n} ${u}${x.bua && x.area_m2 ? `، ومساحة البناء ${x.bua} م²` : ""}`,
+    `• السعر: ${ask ? "عند التواصل" : `${main} ${unit2}`}${x.nego ? " (قابل للتفاوض)" : ""}`
+  ];
+  if (!ask && unit2 === "للدنم" && total) lines.push(`• الإجمالي التقريبي ${money(total)}`);
+  if (x.papers) lines.push(`• الأوراق: ${x.papers}`);
+  (x.feats || []).forEach(f => lines.push(`• ${f}`));
+  if (x.note) lines.push(`\nملاحظة: ${x.note}`);
+  lines.push(``, `الأوراق تُعرض كاملة قبل أي عربون.`, `كود العقار: ${x.code}`,
+    `للاستفسار والمعاينة واتساب: ${PHONE_LOCAL}`, `${NAME} | ${ROLE}`, ``,
+    `#${x.area.replace(/\s+/g, "_")} ${tags[CAT_EN[x.cat]]} #عقارات_سوريا #عقارات_ريف_دمشق`);
+  return lines.join("\n");
+}
+
+async function drawPostCard(x) {
+  try {
+    await Promise.all(['700 84px "Amiri"', '800 40px "Tajawal"', '700 34px "Tajawal"', '500 32px "Tajawal"']
+      .map(f => document.fonts.load(f)));
+  } catch (e) { }
+  const av = await loadAvatar();
+  const c = $("cardCv"), ctx = c.getContext("2d"), W = 1080, H = 1080;
+  const INK = "#F3EDE1", INK2 = "#CFC3A3", GOLD = "#D4AF37", GOLD_L = "#F5D77A", BLACK = "#0B0B0C";
+  const [n, u] = sizeOf(x), [main, unit2] = priceTxt(x);
+  const ask = x.confirmed === false;
+
+  ctx.fillStyle = BLACK; ctx.fillRect(0, 0, W, H);
+  glowBlob(ctx, 930, 120, 560, "#D4AF37", .7);
+  glowBlob(ctx, 120, 980, 560, "#B38728", .6);
+  glowBlob(ctx, 420, 520, 300, "#FCF6BA", .14);
+
+  ctx.direction = "rtl"; ctx.textAlign = "center";
+  ctx.font = '800 32px "Tajawal"';
+  const pillTxt = `للبيع · ${x.cat}`, pillW = ctx.measureText(pillTxt).width + 64;
+  glassPanel(ctx, W - 48 - pillW, 44, pillW, 68, 34, .42);
+  ctx.fillStyle = GOLD_L; ctx.fillText(pillTxt, W - 48 - pillW / 2, 89);
+  ctx.direction = "ltr"; ctx.font = '800 26px "Tajawal"';
+  const codeW = ctx.measureText(x.code).width + 56;
+  glassPanel(ctx, 48, 44, codeW, 68, 34, .42);
+  ctx.fillStyle = INK; ctx.fillText(x.code, 48 + codeW / 2, 87);
+
+  const mx = 48, my = 138, mw = W - 96, mh = 690;
+  glassPanel(ctx, mx, my, mw, mh, 56, .26);
+  ctx.direction = "rtl"; ctx.textAlign = "center";
+  ctx.fillStyle = GOLD; ctx.font = '800 34px "Tajawal"'; ctx.fillText(x.area, W / 2, my + 70);
+
+  ctx.fillStyle = metalGrad(ctx, 140, my + 90, 940, my + 260); ctx.font = '700 84px "Amiri"';
+  let tl = wrapText(ctx, x.title, 860), lh = 92;
+  if (tl.length > 1) { ctx.font = '700 68px "Amiri"'; tl = wrapText(ctx, x.title, 900); lh = 80; }
+  tl = tl.slice(0, 2);
+  const ty = my + 162;
+  tl.forEach((l, i) => ctx.fillText(l, W / 2, ty + i * lh));
+  const yEnd = ty + (tl.length - 1) * lh;
+
+  /* اللوح الداخلي: صورة العقار إن وُجدت، وإلا رقم المساحة */
+  const px = mx + 64, pw = mw - 128, py = yEnd + 50, pH = tl.length > 1 ? 200 : 250;
+  const ph = (x.photos || [])[0];
+  let drew = false;
+  if (ph) {
+    const im = await new Promise(res => {
+      const i = new Image(); i.crossOrigin = "anonymous";
+      i.onload = () => res(i); i.onerror = () => res(null);
+      i.src = newBlobs[ph] ? "data:image/jpeg;base64," + newBlobs[ph] : "/" + ph;
+    });
+    if (im) {
+      ctx.save(); rrect(ctx, px, py, pw, pH, 36); ctx.clip();
+      const s = Math.max(pw / im.width, pH / im.height);
+      ctx.drawImage(im, px + (pw - im.width * s) / 2, py + (pH - im.height * s) / 2, im.width * s, im.height * s);
+      ctx.restore();
+      ctx.strokeStyle = "rgba(252,246,186,.42)"; ctx.lineWidth = 2.5;
+      rrect(ctx, px, py, pw, pH, 36); ctx.stroke();
+      drew = true;
+    }
+  }
+  if (!drew) {
+    glassPanel(ctx, px, py, pw, pH, 36, .34);
+    ctx.fillStyle = INK; ctx.font = `700 ${tl.length > 1 ? 100 : 120}px "Amiri"`;
+    ctx.fillText(String(n), W / 2, py + pH * 0.57);
+    ctx.fillStyle = INK2; ctx.font = '800 34px "Tajawal"'; ctx.fillText(u, W / 2, py + pH - 22);
+  }
+
+  const yp = py + pH + 90;
+  if (ask) { ctx.fillStyle = INK; ctx.font = '800 54px "Tajawal"'; ctx.fillText("السعر عند التواصل", W / 2, yp); }
+  else {
+    ctx.fillStyle = GOLD_L; ctx.font = '700 76px "Amiri"';
+    const label = unit2 === "للدنم" ? `${main} للدنم` : main;
+    ctx.fillText(label + (x.nego ? " · قابل للتفاوض" : ""), W / 2, yp);
+  }
+  ctx.fillStyle = INK2; ctx.font = '500 31px "Tajawal"';
+  const extra = (x.photos || []).length && drew ? [String(n) + " " + u].concat(x.feats || []) : (x.feats || []);
+  const fl = fitLine(ctx, extra.slice(0, 4).join(" · "), 840);
+  if (fl) ctx.fillText(fl, W / 2, Math.min(yp + 56, my + mh - 26));
+
+  const fx = 48, fy = 856, fw = W - 96, fh = 176;
+  glassPanel(ctx, fx, fy, fw, fh, 88, .38);
+  const R = fx + fw - 30, pcx = R - 58, pcy = fy + fh / 2;
+  ctx.save(); ctx.beginPath(); ctx.arc(pcx, pcy, 58, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = "#fff"; ctx.fillRect(pcx - 58, pcy - 58, 116, 116);
+  if (av) { try { ctx.drawImage(av, pcx - 58, pcy - 58, 116, 116); } catch (e) { } }
+  ctx.restore();
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(pcx, pcy, 60, 0, Math.PI * 2); ctx.stroke();
+  ctx.textAlign = "right"; ctx.direction = "rtl";
+  ctx.fillStyle = GOLD_L; ctx.font = '700 54px "Amiri"'; ctx.fillText(NAME, R - 140, fy + 84);
+  ctx.fillStyle = INK2; ctx.font = '500 28px "Tajawal"'; ctx.fillText(ROLE, R - 140, fy + 128);
+  ctx.direction = "ltr"; ctx.font = '800 44px "Tajawal"';
+  const tel = PHONE_LOCAL, telW = ctx.measureText(tel).width + 70;
+  ctx.fillStyle = metalGrad(ctx, fx + 30, fy + 34, fx + 30 + telW, fy + 110);
+  rrect(ctx, fx + 30, fy + 34, telW, 76, 38); ctx.fill();
+  ctx.textAlign = "center"; ctx.fillStyle = BLACK; ctx.fillText(tel, fx + 30 + telW / 2, fy + 88);
+  ctx.direction = "rtl"; ctx.fillStyle = INK2; ctx.font = '500 24px "Tajawal"';
+  ctx.fillText("واتساب · اذكر الكود " + x.code, fx + 30 + telW / 2, fy + 146);
+
+  return new Promise(res => c.toBlob(b => res(b), "image/png"));
+}
+
+let postUrl = null;
+async function openPost(x) {
+  $("postTitle").textContent = "بطاقة منشور · " + x.code;
+  $("postCap").value = postCaption(x);
+  $("postMsg").hidden = true;
+  $("postImg").removeAttribute("src");
+  $("postDlg").showModal();
+  const blob = await drawPostCard(x);
+  if (postUrl) URL.revokeObjectURL(postUrl);
+  postUrl = URL.createObjectURL(blob);
+  $("postImg").src = postUrl;
+  const a = $("postSave");
+  a.href = postUrl;
+  a.setAttribute("download", x.code + ".png");
+}
+
+/* ===================== تمويه أجزاء من الصورة ===================== */
+let blurState = null;
+function openBlur(path) {
+  const src = newBlobs[path] ? "data:image/jpeg;base64," + newBlobs[path] : "/" + path;
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.onload = function () {
+    const cv = $("blurCv"), ctx = cv.getContext("2d");
+    cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+    ctx.drawImage(img, 0, 0);
+    /* نسخة مبكسلة نرسم منها تحت الفرشاة */
+    const px = document.createElement("canvas");
+    const f = 22;                       /* قوة التبكسل */
+    px.width = Math.max(1, Math.round(cv.width / f));
+    px.height = Math.max(1, Math.round(cv.height / f));
+    const pc = px.getContext("2d");
+    pc.imageSmoothingEnabled = true;
+    pc.drawImage(img, 0, 0, px.width, px.height);
+    blurState = { path, img, cv, ctx, px, drawing: false, touched: false };
+    $("blurDlg").showModal();
+  };
+  img.onerror = function () {
+    const s = upStat(); s.hidden = false; s.className = "upstat bad";
+    s.textContent = "ما قدرت أفتح الصورة للتمويه.";
+  };
+  img.src = src;
+}
+function blurAt(ev) {
+  const st = blurState; if (!st) return;
+  const r = st.cv.getBoundingClientRect();
+  const t = ev.touches ? ev.touches[0] : ev;
+  const x = (t.clientX - r.left) * (st.cv.width / r.width);
+  const y = (t.clientY - r.top) * (st.cv.height / r.height);
+  const rad = (+$("blurSize").value) * (st.cv.width / r.width) / 2;
+  const c = st.ctx;
+  c.save();
+  c.beginPath(); c.arc(x, y, rad, 0, Math.PI * 2); c.clip();
+  c.imageSmoothingEnabled = false;
+  c.drawImage(st.px, 0, 0, st.px.width, st.px.height, 0, 0, st.cv.width, st.cv.height);
+  c.restore();
+  st.touched = true;
+}
+
 /* ===== حالة التعديلات ===== */
 const liveRows = () => ROWS.filter(r => r.status !== "موقوف")
   .sort((a, b) => a.code.localeCompare(b.code));
@@ -687,6 +924,13 @@ function render() {
     cam.setAttribute("aria-label", "صور " + r.code);
     cam.addEventListener("click", ev => { ev.stopPropagation(); openPhotos(r); });
     card.appendChild(cam);
+
+    const pc = document.createElement("button");
+    pc.type = "button"; pc.className = "card-post";
+    pc.textContent = "🖼 بطاقة";
+    pc.setAttribute("aria-label", "بطاقة منشور " + r.code);
+    pc.addEventListener("click", ev => { ev.stopPropagation(); openPost(r); });
+    card.appendChild(pc);
 
     const row = document.createElement("div"); row.className = "row1";
     const code = document.createElement("span"); code.className = "code"; code.textContent = r.code;
@@ -754,6 +998,9 @@ function drawPhotos() {
       m.addEventListener("click", () => { photos.unshift(photos.splice(i, 1)[0]); drawPhotos(); syncQuick(); });
       act.appendChild(m);
     }
+    const bl = document.createElement("button"); bl.type = "button"; bl.textContent = "تمويه";
+    bl.addEventListener("click", () => openBlur(path));
+    act.appendChild(bl);
     const d = document.createElement("button"); d.type = "button"; d.className = "del"; d.textContent = "حذف";
     d.addEventListener("click", () => { photos.splice(i, 1); drawPhotos(); syncQuick(); });
     act.appendChild(d);
@@ -1043,6 +1290,54 @@ for (const id of ["f_photos", "q_photos"]) {
     await addPhotos(files);
   });
 }
+/* --- بطاقة المنشور --- */
+$("postClose").addEventListener("click", () => $("postDlg").close());
+$("postDone").addEventListener("click", () => $("postDlg").close());
+$("postCopy").addEventListener("click", async () => {
+  const m = $("postMsg"); m.hidden = false; m.className = "upstat";
+  try { await navigator.clipboard.writeText($("postCap").value); m.textContent = "انتسخ النص ✓"; }
+  catch (e) { $("postCap").select(); m.textContent = "حدّد النص وانسخه يدوياً."; }
+  setTimeout(() => { m.hidden = true; }, 3000);
+});
+
+/* --- تمويه الصورة --- */
+(function () {
+  const cv = $("blurCv");
+  const down = e => { if (!blurState) return; blurState.drawing = true; blurAt(e); e.preventDefault(); };
+  const move = e => { if (blurState && blurState.drawing) { blurAt(e); e.preventDefault(); } };
+  const up = () => { if (blurState) blurState.drawing = false; };
+  cv.addEventListener("pointerdown", down);
+  cv.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+  cv.addEventListener("touchstart", down, { passive: false });
+  cv.addEventListener("touchmove", move, { passive: false });
+  window.addEventListener("touchend", up);
+})();
+$("blurReset").addEventListener("click", () => {
+  if (!blurState) return;
+  blurState.ctx.drawImage(blurState.img, 0, 0);
+  blurState.touched = false;
+});
+$("blurClose").addEventListener("click", () => $("blurDlg").close());
+$("blurCancel").addEventListener("click", () => $("blurDlg").close());
+$("blurApply").addEventListener("click", () => {
+  const st = blurState;
+  if (!st) return;
+  if (!st.touched) { $("blurDlg").close(); return; }
+  st.cv.toBlob(async b => {
+    const buf = new Uint8Array(await b.arrayBuffer());
+    newBlobs[st.path] = b64(buf);      /* نفس المسار: الصورة الجديدة تستبدل القديمة عند النشر */
+    $("blurDlg").close();
+    drawPhotos();
+    render();
+    const s2 = upStat();
+    s2.hidden = false; s2.className = "upstat";
+    s2.textContent = "انطبق التمويه — اضغط «نشر» ليوصل للموقع.";
+    setTimeout(() => { s2.hidden = true; }, 4500);
+  }, "image/jpeg", 0.82);
+});
+$("blurDlg").addEventListener("close", () => { blurState = null; });
+
 $("qClose").addEventListener("click", () => $("photoDlg").close());
 $("qDone").addEventListener("click", () => $("photoDlg").close());
 $("photoDlg").addEventListener("close", () => { quickRow = null; });

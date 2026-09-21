@@ -85,6 +85,10 @@ header.top .sub{margin:2px 0 0;color:var(--ink-2);font-size:14px}
   background:rgba(20,18,13,.86);border:1px solid var(--line);color:var(--gold-light);border-radius:999px;
   padding:6px 13px;font:800 12.5px/1 var(--body);cursor:pointer}
 .card-cam:hover{background:rgba(212,175,55,.35);color:var(--ink)}
+.card-post{position:absolute;top:10px;inset-inline-start:96px;z-index:2;display:inline-flex;align-items:center;gap:5px;
+  background:rgba(20,18,13,.86);border:1px solid var(--line);color:var(--gold-light);border-radius:999px;
+  padding:6px 13px;font:800 12.5px/1 var(--body);cursor:pointer}
+.card-post:hover{background:rgba(212,175,55,.35);color:var(--ink)}
 .row1{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
 .code{font:800 12px/1 var(--body);letter-spacing:.1em;direction:ltr;color:var(--gold-light);
   background:rgba(212,175,55,.14);border:1px solid var(--line);padding:6px 10px;border-radius:999px}
@@ -171,6 +175,25 @@ option{background:#16140E;color:var(--ink)}
 .dlg-foot .spacer{flex:1}
 .err{color:var(--danger);font-weight:700;font-size:14px;flex-basis:100%}
 .state{padding:50px 20px;text-align:center;color:var(--ink-2);font-weight:700}
+
+/* بطاقة المنشور */
+.post-wrap{display:grid;grid-template-columns:minmax(220px,1fr) minmax(240px,1fr);gap:18px}
+.post-prev{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:rgba(0,0,0,.4)}
+.post-prev img{width:100%;aspect-ratio:1;object-fit:contain;display:block}
+.post-side{display:flex;flex-direction:column;gap:8px}
+.post-side label{font-size:13.5px;font-weight:800;color:var(--ink-2)}
+.post-side textarea{flex:1;min-height:200px;font-size:14px;line-height:1.7}
+.post-acts{display:flex;gap:8px;flex-wrap:wrap}
+.post-acts .btn{flex:1;text-decoration:none}
+
+/* تمويه */
+.blur-stage{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:rgba(0,0,0,.5);
+  display:flex;align-items:center;justify-content:center;max-height:52vh}
+.blur-stage canvas{max-width:100%;max-height:52vh;display:block;touch-action:none;cursor:crosshair}
+.blur-tools{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center}
+.blur-tools label{font-size:13.5px;font-weight:800;color:var(--ink-2)}
+.blur-tools input[type=range]{flex:1;min-width:140px;accent-color:var(--gold)}
+@media (max-width:640px){.post-wrap{grid-template-columns:1fr}}
 @media (max-width:640px){
   header.top{padding:18px 20px;border-radius:22px}
   .dlg{padding:16px;gap:15px}
@@ -257,6 +280,52 @@ option{background:#16140E;color:var(--ink)}
   <button class="btn btn-primary" id="pubBtn" type="button">نشر على الموقع</button>
   <button class="btn btn-ghost btn-sm" id="dropBtn" type="button" hidden>تراجع عن التعديلات</button>
 </div>
+
+<!-- نافذة بطاقة المنشور -->
+<dialog id="postDlg" aria-labelledby="postTitle">
+  <div class="dlg">
+    <div class="dlg-head">
+      <h2 id="postTitle">بطاقة منشور</h2>
+      <button class="x" type="button" id="postClose" aria-label="إغلاق">×</button>
+    </div>
+    <div class="post-wrap">
+      <div class="post-prev"><img id="postImg" alt="معاينة بطاقة المنشور"></div>
+      <div class="post-side">
+        <label for="postCap">نص المنشور</label>
+        <textarea id="postCap" rows="12"></textarea>
+        <div class="post-acts">
+          <a class="btn btn-primary" id="postSave" download>حفظ الصورة</a>
+          <button class="btn btn-ghost" type="button" id="postCopy">نسخ النص</button>
+        </div>
+        <p class="upstat" id="postMsg" hidden></p>
+      </div>
+    </div>
+    <div class="dlg-foot"><button class="btn btn-ghost" type="button" id="postDone">تمّ</button></div>
+  </div>
+</dialog>
+
+<!-- نافذة تمويه الصورة -->
+<dialog id="blurDlg" aria-labelledby="blurTitle">
+  <div class="dlg">
+    <div class="dlg-head">
+      <h2 id="blurTitle">تمويه أجزاء من الصورة</h2>
+      <button class="x" type="button" id="blurClose" aria-label="إغلاق">×</button>
+    </div>
+    <p class="hint" style="margin:0">مرّر إصبعك (أو الفأرة) على اللي بدك تخفيه: بيت الجار، لوحة الشارع، أي معلم بيدلّ على الموقع.</p>
+    <div class="blur-stage"><canvas id="blurCv"></canvas></div>
+    <div class="blur-tools">
+      <label for="blurSize">حجم الفرشاة</label>
+      <input type="range" id="blurSize" min="20" max="160" value="70">
+      <button class="btn btn-ghost btn-sm" type="button" id="blurReset">تراجع عن الكل</button>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn btn-primary" type="button" id="blurApply">تمّ</button>
+      <button class="btn btn-ghost" type="button" id="blurCancel">إلغاء</button>
+    </div>
+  </div>
+</dialog>
+
+<canvas id="cardCv" width="1080" height="1080" hidden></canvas>
 
 <!-- نافذة الصور السريعة -->
 <dialog id="photoDlg" aria-labelledby="qTitle">
