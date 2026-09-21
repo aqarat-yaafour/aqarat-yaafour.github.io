@@ -118,8 +118,7 @@ async function commit(repo, files, message, deletes) {
 /* ===== مولّد الموقع (منقول حرفياً عن build_site.py) ===== */
 /* صورة المعاينة عند مشاركة الرابط على واتساب وفيسبوك */
 function ogImage(x) {
-  const ph = (x && x.photos) || [];
-  return ph.length ? BASE + "/" + ph[0] : BASE + "/img/mohammad-khaled.jpg";
+  return BASE + "/img/mohammad-khaled.jpg";
 }
 function headHtml(title, desc, canonical, jsonld, extra, image) {
   const up = canonical.indexOf("/listing/") >= 0 ? "../" : "";
@@ -169,20 +168,12 @@ const FOOT = () => `<footer class="site">
 </footer>
 </body></html>
 `;
+/* الموقع العام لا يعرض صور العقارات إطلاقاً (حماية من كشف الموقع).
+   تُرسل الصور برابط خاص للمشتري الجدّي — انظر مكتبة الصور أدناه. */
 function mediaHtml(x, up, big) {
-  const [n, u] = sizeOf(x), ph = x.photos || [];
-  const cls = big ? "media photo big" : "media photo";
-  if (ph.length) {
-    const first = `<img src="${up}${esc(ph[0])}" alt="${esc(x.title)} في ${esc(x.area)} - ${x.code}" loading="lazy">`;
-    let rest = "";
-    if (big && ph.length > 1) {
-      rest = '<div class="thumbs">' + ph.slice(1).map((p, i) =>
-        `<img src="${up}${esc(p)}" alt="${esc(x.title)} - صورة ${i + 2}" loading="lazy">`).join("") + "</div>";
-    }
-    return `<div class="${cls}">${first}</div>${rest}`;
-  }
-  const soon = big ? '<span class="soon">الصور قريباً</span>' : "";
-  return `<div class="media${big ? " big" : ""}"><span class="num">${n}</span><span class="unit">${u}</span>${soon}</div>`;
+  const [n, u] = sizeOf(x);
+  const note = big ? '<span class="soon">الصور تُرسل عند التواصل</span>' : "";
+  return `<div class="media${big ? " big" : ""}"><span class="num">${n}</span><span class="unit">${u}</span>${note}</div>`;
 }
 function cardHtml(x, up) {
   up = up || "";
@@ -215,7 +206,6 @@ function listingPage(x, live) {
     },
     offers: offer
   };
-  if ((x.photos || []).length) jsonld.image = x.photos.map(p => BASE + "/" + p);
   jsonld.broker = { "@type": "RealEstateAgent", name: NAME, telephone: "+" + PHONE_INTL, areaServed: ["يعفور", "قرى الشام", "الصبورة", "ريف دمشق"], url: BASE + "/" };
   const areaPage = AREA_SLUG[x.area] + ".html";
   const crumbs = {
@@ -288,8 +278,7 @@ function featured(live) {
   return ok.slice().sort((a, b) => (totalOf(b) - totalOf(a)) || a.code.localeCompare(b.code))[0];
 }
 function heroStyle(live) {
-  const f = featured(live), ph = (f && f.photos) || [];
-  return ph.length ? ` style="background-image:url(&quot;${esc(ph[0])}&quot;)"` : "";
+  return "";
 }
 function specRow(x) {
   const [n, u] = sizeOf(x);
@@ -623,7 +612,7 @@ function publicData(live) {
       price: conf ? x.price : null, mode: conf ? (x.mode === "للدنم" ? "dunam" : "total") : "ask",
       nego: conf ? !!x.nego : false, feats: x.feats || [], note: x.note || "",
       total: conf ? totalOf(x) : null, unconfirmed: !conf,
-      papers: x.papers || "", photos: x.photos || []
+      papers: x.papers || "", photos: []
     };
   });
 }
@@ -865,6 +854,96 @@ function blurAt(ev) {
   st.touched = true;
 }
 
+/* ===================== مكتبة الصور الخاصة =====================
+   الصور لا تُنشر على الموقع العام أبداً. لكل عقار صفحة صور برابط عشوائي
+   طويل: غير مفهرسة، غير مربوطة بأي رابط، ولا تُذكر في خريطة الموقع.
+   يُرسل الرابط لمشترٍ جدّي فقط، ويمكن إبطاله بتوليد رابط جديد. */
+
+const GAL_DIR = "p";   /* مجلد الصفحات الخاصة */
+
+function newKey() {
+  const a = "abcdefghijkmnopqrstuvwxyz23456789";   /* بلا أحرف تلتبس */
+  const b = new Uint8Array(20);
+  crypto.getRandomValues(b);
+  return Array.from(b, v => a[v % a.length]).join("");
+}
+const galPath = key => `${GAL_DIR}/${key}.html`;
+const galUrl = key => `${BASE}/${galPath(key)}`;
+
+/** صفحة الصور الخاصة — تصميم الموقع نفسه، noindex، بلا روابط للموقع */
+function galleryPage(x) {
+  const [n, u] = sizeOf(x), [main, unit2] = priceTxt(x);
+  const imgs = (x.photos || []).map((p, i) =>
+    `<figure class="gshot"><img src="${BASE}/${esc(p)}" alt="${esc(x.title)} — صورة ${i + 1}" loading="lazy"></figure>`
+  ).join("");
+  const waTxt = `مرحباً أستاذ محمد، شفت صور العقار ${x.code} (${x.title}) وبدي أستفسر.`;
+  return `<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>صور ${esc(x.code)} — ${esc(x.title)}</title>
+<meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
+<meta name="referrer" content="no-referrer">
+<link rel="icon" href="${BASE}/favicon.svg" type="image/svg+xml">
+<meta name="theme-color" content="#0B0B0C">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700;800&display=swap">
+<link rel="stylesheet" href="${BASE}/style.css">
+<style>
+.gwrap{max-width:900px;margin-inline:auto;padding:var(--s5) var(--s4) var(--s7)}
+.ghead{padding:var(--s5);border-radius:var(--r3);margin-bottom:var(--s5)}
+.ghead h1{font-size:var(--f-sec);color:var(--ink);margin:var(--s2) 0}
+.gshots{display:grid;gap:var(--s4)}
+.gshot{margin:0;border:1px solid var(--glass-line);border-radius:var(--r3);overflow:hidden;background:rgba(0,0,0,.4)}
+.gshot img{width:100%;display:block}
+.gnote{margin-top:var(--s5);font-size:var(--f2);color:var(--muted);text-align:center;line-height:1.8}
+</style>
+</head>
+<body>
+<div class="gwrap">
+  <header class="ghead glass">
+    <p class="eyebrow">صور خاصة · ${esc(x.code)}</p>
+    <h1>${esc(x.title)}</h1>
+    <p class="where"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS.pin}</svg>${esc(x.area)} · ريف دمشق</p>
+    <div class="specrow">${specRow(x)}</div>
+    <div class="fprice"><span class="main">${main}</span>${unit2 ? `<span class="u">${unit2}</span>` : ""}</div>
+    <div class="actions" style="margin-top:var(--s4)">
+      <a class="btn btn-primary" target="_blank" rel="noopener" href="${wa(waTxt)}">استفسر على واتساب <span class="ar">←</span></a>
+      <a class="btn btn-ghost" href="tel:+${PHONE_INTL}" dir="ltr">${PHONE_LOCAL}</a>
+    </div>
+  </header>
+  <div class="gshots">${imgs || '<p class="gnote">ما في صور بعد لهذا العقار.</p>'}</div>
+  <p class="gnote">هذه الصفحة خاصة — أُرسلت لك من ${NAME}، ${ROLE}.<br>الأوراق تُعرض كاملة قبل أي عربون.</p>
+</div>
+</body></html>`;
+}
+
+/** نافذة مشاركة الرابط الخاص */
+let galRow = null;
+function openGallery(r) {
+  galRow = r;
+  const has = (r.photos || []).length;
+  $("galTitle").textContent = "صور " + r.code + " — رابط خاص";
+  $("galSub").textContent = r.title + " · " + r.area
+    + (has ? ` · ${has} صورة` : " · ما في صور بعد");
+  const key = r.galKey || "";
+  $("galLink").value = key ? galUrl(key) : "";
+  $("galLink").disabled = !key;
+  $("galCopy").disabled = !key;
+  $("galOpen").href = key ? galUrl(key) : "#";
+  $("galOpen").hidden = !key;
+  $("galWa").hidden = !key;
+  if (key) {
+    $("galWa").href = "https://wa.me/?text=" + encodeURIComponent(
+      `صور العقار ${r.code} — ${r.title} (${r.area})\n${galUrl(key)}`);
+  }
+  $("galNew").textContent = key ? "رابط جديد (يُبطل القديم)" : "أنشئ الرابط";
+  $("galMsg").hidden = true;
+  $("galDlg").showModal();
+}
+
 /* ===== حالة التعديلات ===== */
 const liveRows = () => ROWS.filter(r => r.status !== "موقوف")
   .sort((a, b) => a.code.localeCompare(b.code));
@@ -931,6 +1010,13 @@ function render() {
     pc.setAttribute("aria-label", "بطاقة منشور " + r.code);
     pc.addEventListener("click", ev => { ev.stopPropagation(); openPost(r); });
     card.appendChild(pc);
+
+    const gl = document.createElement("button");
+    gl.type = "button"; gl.className = "card-gal";
+    gl.textContent = "🔗 رابط";
+    gl.setAttribute("aria-label", "الرابط الخاص لصور " + r.code);
+    gl.addEventListener("click", ev => { ev.stopPropagation(); openGallery(r); });
+    card.appendChild(gl);
 
     const row = document.createElement("div"); row.className = "row1";
     const code = document.createElement("span"); code.className = "code"; code.textContent = r.code;
@@ -1216,10 +1302,19 @@ async function publish() {
     for (const c of cols) files.push({ path: c.slug, content: collectionPage(c, cols) });
     for (const x of live) files.push({ path: `listing/${x.code}.html`, content: listingPage(x, live) });
     for (const p in newBlobs) files.push({ path: p, b64: newBlobs[p] });
+    /* صفحات الصور الخاصة: لكل عقار له مفتاح وصور */
+    const galKeep = new Set();
+    for (const r of ROWS) {
+      if (r.galKey && (r.photos || []).length) {
+        files.push({ path: galPath(r.galKey), content: galleryPage(r) });
+        galKeep.add(galPath(r.galKey));
+      }
+    }
 
     /* صفحات عقارات ما عادت متاحة (انحذفت أو صارت موقوفة) تُشال من الموقع
        حتى ما يوصلها زبون من جوجل ويتصل على عقار مباع */
     const keep = new Set(live.map(x => `listing/${x.code}.html`));
+    const usedPhotos = new Set(ROWS.flatMap(r => r.photos || []));
     /* كل أسماء صفحات التصفّح الممكنة — نحذف ما لم يعد منها مستحقّاً */
     const colNames = new Set();
     for (const a of AREA_ORDER) {
@@ -1230,7 +1325,11 @@ async function publish() {
     const existing = await repoPaths(CFG.pub);
     const deletes = existing.filter(p =>
       (p.startsWith("listing/") && p.endsWith(".html") && !keep.has(p)) ||
-      (colNames.has(p) && !colKeep.has(p)));
+      (colNames.has(p) && !colKeep.has(p)) ||
+      /* رابط خاص أُبطل أو عقار ما عاد له صور */
+      (p.startsWith(GAL_DIR + "/") && p.endsWith(".html") && !galKeep.has(p)) ||
+      /* صورة ما عاد يشير إليها أي عقار */
+      (p.startsWith("img/") && p !== "img/mohammad-khaled.jpg" && !usedPhotos.has(p)));
 
     say("جارٍ الرفع (" + files.length + " ملف"
       + (deletes.length ? " · حذف " + deletes.length : "") + ")…", "warn", true);
@@ -1292,6 +1391,26 @@ for (const id of ["f_photos", "q_photos"]) {
     await addPhotos(files);
   });
 }
+/* --- الرابط الخاص للصور --- */
+$("galClose").addEventListener("click", () => $("galDlg").close());
+$("galDone").addEventListener("click", () => $("galDlg").close());
+$("galCopy").addEventListener("click", async () => {
+  const m = $("galMsg"); m.hidden = false; m.className = "upstat";
+  try { await navigator.clipboard.writeText($("galLink").value); m.textContent = "انتسخ الرابط ✓"; }
+  catch (e) { $("galLink").select(); m.textContent = "حدّد الرابط وانسخه يدوياً."; }
+  setTimeout(() => { m.hidden = true; }, 3000);
+});
+$("galNew").addEventListener("click", () => {
+  if (!galRow) return;
+  if (galRow.galKey && !confirm("الرابط القديم رح يبطل فوراً وما حدا يقدر يفتحه. متأكد؟")) return;
+  galRow.galKey = newKey();
+  galRow.updatedAt = new Date().toISOString();
+  openGallery(galRow);
+  render();
+  const m = $("galMsg"); m.hidden = false; m.className = "upstat";
+  m.textContent = "انعمل الرابط — اضغط «نشر» ليصير شغّال.";
+});
+
 /* --- بطاقة المنشور --- */
 $("postClose").addEventListener("click", () => $("postDlg").close());
 $("postDone").addEventListener("click", () => $("postDlg").close());

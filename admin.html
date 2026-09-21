@@ -89,6 +89,12 @@ header.top .sub{margin:2px 0 0;color:var(--ink-2);font-size:14px}
   background:rgba(20,18,13,.86);border:1px solid var(--line);color:var(--gold-light);border-radius:999px;
   padding:6px 13px;font:800 12.5px/1 var(--body);cursor:pointer}
 .card-post:hover{background:rgba(212,175,55,.35);color:var(--ink)}
+.card-gal{position:absolute;top:10px;inset-inline-start:186px;z-index:2;display:inline-flex;align-items:center;gap:5px;
+  background:rgba(20,18,13,.86);border:1px solid var(--line);color:var(--gold-light);border-radius:999px;
+  padding:6px 13px;font:800 12.5px/1 var(--body);cursor:pointer}
+.card-gal:hover{background:rgba(212,175,55,.35);color:var(--ink)}
+#galLink{width:100%;background:rgba(0,0,0,.5);color:var(--gold-light);border:1px solid var(--line);
+  border-radius:14px;padding:12px 14px;font-size:13.5px;direction:ltr}
 .row1{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
 .code{font:800 12px/1 var(--body);letter-spacing:.1em;direction:ltr;color:var(--gold-light);
   background:rgba(212,175,55,.14);border:1px solid var(--line);padding:6px 10px;border-radius:999px}
@@ -280,6 +286,31 @@ option{background:#16140E;color:var(--ink)}
   <button class="btn btn-primary" id="pubBtn" type="button">نشر على الموقع</button>
   <button class="btn btn-ghost btn-sm" id="dropBtn" type="button" hidden>تراجع عن التعديلات</button>
 </div>
+
+
+<!-- نافذة الرابط الخاص للصور -->
+<dialog id="galDlg" aria-labelledby="galTitle">
+  <div class="dlg">
+    <div class="dlg-head">
+      <h2 id="galTitle">رابط خاص</h2>
+      <button class="x" type="button" id="galClose" aria-label="إغلاق">×</button>
+    </div>
+    <p class="hint" id="galSub" style="margin:0"></p>
+    <p class="hint" style="margin:0">هذا الرابط يفتح صور العقار كاملة. مو مفهرس بجوجل ومو مربوط بالموقع — ما بيوصله إلا اللي بتبعتله ياه.</p>
+    <input type="text" id="galLink" readonly dir="ltr" placeholder="ما في رابط بعد">
+    <div class="photo-actions">
+      <button class="btn btn-primary" type="button" id="galCopy">نسخ الرابط</button>
+      <a class="btn btn-ghost" id="galWa" target="_blank" rel="noopener" hidden>إرسال بواتساب</a>
+      <a class="btn btn-ghost" id="galOpen" target="_blank" rel="noopener" hidden>معاينة</a>
+      <span class="upstat" id="galMsg" hidden></span>
+    </div>
+    <div class="dlg-foot">
+      <button class="btn btn-danger" type="button" id="galNew">أنشئ الرابط</button>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost" type="button" id="galDone">تمّ</button>
+    </div>
+  </div>
+</dialog>
 
 <!-- نافذة بطاقة المنشور -->
 <dialog id="postDlg" aria-labelledby="postTitle">
