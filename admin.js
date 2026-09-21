@@ -360,11 +360,11 @@ function indexPage(live) {
     makesOffer: ["بيع وشراء الأراضي", "بيع الفلل والمزارع", "الاستشارات العقارية", "متابعة الأوراق والتسجيل العقاري", "الإشراف على البناء والإكساء"]
       .map(s => ({ "@type": "Offer", itemOffered: { "@type": "Service", name: s } }))
   };
-  let stats = "";
-  for (const en of ["land", "villa", "farm", "apt"]) {
-    const v = live.filter(x => CAT_EN[x.cat] === en).length;
-    if (v) stats += `<span><b>${v}</b>${CAT_AR[en]}</span>`;
-  }
+  const stats = ["land", "villa", "farm", "apt"]
+    .map(en => [en, live.filter(x => CAT_EN[x.cat] === en).length])
+    .filter(([, v]) => v)
+    .map(([en, v]) => `${v} ${CAT_AR[en]}`)
+    .join(" · ");
   const body = `${NAV("")}
 <section class="hero">
   <div class="hero-bg"${heroStyle(live)}></div>
@@ -392,7 +392,10 @@ function indexPage(live) {
       <p class="eyebrow">العقارات المتاحة</p>
       <h2 id="listings">أراضٍ وفلل ومزارع<br><span class="g">للبيع في يعفور وقرى الشام</span></h2>
     </div>
-    <p class="rcount" id="rcount">${live.length} عقار متاح</p>
+    <div class="side">
+      <p class="rcount" id="rcount">${live.length} عقار متاح</p>
+      <p class="statline">${stats}</p>
+    </div>
   </div>
   <div class="grid" id="listings-grid">${live.map(x => cardHtml(x, "")).join("")}</div>
   <p class="rnone" id="rnone" hidden>ما في عقار مطابق لهالبحث. جرّب توسّع الميزانية أو غيّر النوع.</p>
