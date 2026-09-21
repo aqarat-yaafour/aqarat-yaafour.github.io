@@ -737,9 +737,8 @@ $("dropBtn").addEventListener("click", () => {
   location.reload();
 });
 $("outBtn").addEventListener("click", () => {
-  if (isDirty() && !confirm("عندك تعديلات ما اننشرت. بدك تفصل وتخسرها؟")) return;
-  try { localStorage.removeItem(LS); localStorage.removeItem(LS_DRAFT); } catch (e) { }
-  location.reload();
+  if (isDirty() && !confirm("عندك تعديلات ما اننشرت. بدك تفتح الإعدادات وتخسرها؟")) return;
+  openSetup();
 });
 window.addEventListener("beforeunload", e => { if (isDirty()) { e.preventDefault(); e.returnValue = ""; } });
 
@@ -803,13 +802,40 @@ async function boot() {
     $("app").hidden = false;
     render();
   } catch (e) {
-    $("loading").textContent = "ما زبط الاتصال: " + e.message;
+    /* غالباً تغيّر اسم الحساب أو المستودع — نفتح الإعدادات والمفتاح محفوظ */
+    openSetup("ما قدرت أوصل لمستودعاتك: " + e.message + " — دقّق الأسماء تحت واضغط «اتصل».");
   }
+}
+
+/** يفتح شاشة الإعداد وفيها ما هو محفوظ (المفتاح يبقى) — لتعديل الأسماء بلا إعادة إدخاله */
+function openSetup(msg) {
+  const c = CFG || {};
+  $("s_token").value = c.token || "";
+  if (c.owner) $("s_owner").value = c.owner;
+  if (c.pub) $("s_pub").value = c.pub;
+  if (c.priv) $("s_priv").value = c.priv;
+  if (msg) { $("s_err").textContent = msg; $("s_err").hidden = false; }
+  $("loading").hidden = true;
+  $("app").hidden = true;
+  $("setup").hidden = false;
 }
 
 (function start() {
   let cfg = null;
   try { cfg = JSON.parse(localStorage.getItem(LS) || "null"); } catch (e) { }
-  if (cfg && cfg.token) { CFG = cfg; boot(); }
-  else { $("loading").hidden = true; $("setup").hidden = false; }
+  if (!cfg || !cfg.token) { $("loading").hidden = true; $("setup").hidden = false; return; }
+
+  /* تحديث تلقائي للاسم القديم بعد تغيير اسم الحساب على GitHub */
+  const OLD = "mka121", NEW = "aqarat-yaafour";
+  let moved = false;
+  for (const k of ["owner", "pub", "priv"]) {
+    if (typeof cfg[k] === "string" && cfg[k].indexOf(OLD) >= 0) {
+      cfg[k] = cfg[k].split(OLD).join(NEW);
+      moved = true;
+    }
+  }
+  if (moved) { try { localStorage.setItem(LS, JSON.stringify(cfg)); } catch (e) { } }
+
+  CFG = cfg;
+  boot();
 })();
