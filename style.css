@@ -92,9 +92,18 @@ h2{font-family:var(--display);font-size:28px;color:var(--gold-light);margin:32px
 
 @media (max-width:760px){
   .hero{min-height:auto}
-  .hero-inner{padding:38px 16px 84px;gap:24px}
-  .feature{flex:1 1 100%}
-  .sechead{margin:34px 0 16px}
+  .hero-inner{padding:30px 16px 76px;gap:20px}
+  .hero h1{margin:4px 0 10px}
+  .hero .lead{font-size:15.5px;margin-bottom:18px}
+  /* الاسم والصورة موجودان في الشريط العلوي، فلا داعي لتكرارهما ودفع العقارات للأسفل */
+  .hero .who{display:none}
+  .feature{flex:1 1 100%;padding:18px 20px;gap:7px}
+  .feature h2{font-size:22px}
+  .feature .fprice{padding-top:10px}
+  .feature .fprice .main{font-size:27px}
+  .sechead{margin:30px 0 14px}
+  .search{margin-top:-52px;padding:14px}
+  .search .btn{flex:1 1 100%}
 }
 /* شريط البحث — يطفو على حافة الواجهة */
 .search{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;padding:16px 18px;border-radius:24px;
