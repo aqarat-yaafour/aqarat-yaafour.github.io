@@ -142,6 +142,11 @@ function headHtml(title, desc, canonical, jsonld, extra, image) {
 <meta property="og:image" content="${og}">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${og}">
+<link rel="icon" href="${BASE}/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="${BASE}/favicon.ico" sizes="32x32">
+<link rel="apple-touch-icon" href="${BASE}/apple-touch-icon.png">
+<link rel="manifest" href="${BASE}/site.webmanifest">
+<meta name="theme-color" content="#0B0B0C">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700;800&display=swap">

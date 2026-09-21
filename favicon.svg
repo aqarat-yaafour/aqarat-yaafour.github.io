@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" role="img" aria-label="عقارات يعفور">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#AA771C"/><stop offset="0.18" stop-color="#D4AF37"/>
+      <stop offset="0.38" stop-color="#FCF6BA"/><stop offset="0.55" stop-color="#C9A13B"/>
+      <stop offset="0.72" stop-color="#F5E7A1"/><stop offset="1" stop-color="#B38728"/>
+    </linearGradient>
+  </defs>
+  <rect width="24" height="24" rx="5.3" fill="#0B0B0C"/>
+  <g transform="translate(12 12) scale(0.72) translate(-12 -12)">
+    <path fill="url(#g)" d="M12 3 2 10h3v10h5v-6h4v6h5V10h3L12 3Z"/>
+  </g>
+</svg>
