@@ -987,6 +987,8 @@ function drawPhotos() {
     const fig = document.createElement("div"); fig.className = "ph";
     const img = document.createElement("img");
     img.src = photoSrc(path); img.alt = "صورة " + (i + 1); img.loading = "lazy";
+    img.title = "اضغط للمعاينة الكاملة والتمويه";
+    img.addEventListener("click", () => openBlur(path));
     fig.appendChild(img);
     if (i === 0) {
       const t = document.createElement("span"); t.className = "main-tag"; t.textContent = "رئيسية";
