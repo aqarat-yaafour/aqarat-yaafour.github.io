@@ -9,30 +9,34 @@
 <meta name="theme-color" content="#070707" id="themeColor">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@300;400;500;700;800&display=swap">
+<link id="fontLink" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@300;400;500;700;800&display=swap">
 <style>
 :root{
   --bg:#070707; --bg2:#101010; --card:#141414; --sheet:#121212; --ink:#efe9dc; --ink2:#c9c1b1; --mute:#8f887b;
   --gold:#d9b35b; --gold2:#f4d98e; --gold3:#8c6b25; --on-acc:#161005; --cover1:#1c1913; --cover2:#0d0d0e;
   --bg-rgb:7,7,7; --ink-rgb:239,233,220; --acc-rgb:217,179,91; --acc2-rgb:244,217,142; --shadow:rgba(0,0,0,.55);
   --line:rgba(var(--ink-rgb),.1);
+  --fd:'Amiri',serif; --fb:'Tajawal',system-ui,sans-serif; --fdw:700; --dlh:1; --dls:-1px; --fbw:800;
   --pad:22px; --ease:cubic-bezier(.2,.8,.2,1);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 html,body{overflow-x:clip}
 #feat{overflow-x:clip}
-body{transition:background-color .5s,color .5s;background:var(--bg);color:var(--ink);font-family:'Tajawal',system-ui,sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+body{transition:background-color .5s,color .5s;background:var(--bg);color:var(--ink);font-family:var(--fb);overflow-x:hidden;-webkit-font-smoothing:antialiased}
 a{color:inherit;text-decoration:none}
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-.serif{font-family:'Amiri',serif}
+.serif{font-family:var(--fd)}
 .gtext{background:linear-gradient(100deg,var(--gold3),var(--gold2) 45%,var(--gold) 70%,var(--gold3));-webkit-background-clip:text;background-clip:text;color:transparent}
 .outline{color:transparent;-webkit-text-stroke:1.2px var(--gold)}
+/* heavy display faces overlap their own contours, so outlines turn into solid accent text */
+html.solid .outline{color:var(--gold);-webkit-text-stroke:0}
+html.solid .step .num{color:var(--gold);-webkit-text-stroke:0;opacity:.85}
 .wrap{max-width:1180px;margin:0 auto;padding:0 var(--pad)}
 
 /* intro curtain */
 .intro{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;
   animation:lift .9s var(--ease) 1.25s forwards}
-.intro b{font:700 34px 'Amiri';letter-spacing:.5px;opacity:0;animation:fadeup .7s var(--ease) .15s forwards}
+.intro b{font:var(--fdw) 34px var(--fd);letter-spacing:.5px;opacity:0;animation:fadeup .7s var(--ease) .15s forwards}
 .intro i{display:block;width:160px;height:1px;background:var(--gold);transform:scaleX(0);animation:draw .9s var(--ease) .3s forwards}
 .intro small{color:var(--mute);font-size:12px;letter-spacing:3px;opacity:0;animation:fadeup .7s var(--ease) .45s forwards}
 @keyframes lift{to{transform:translateY(-100%)}}
@@ -60,8 +64,8 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .hcopy{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;justify-content:flex-start;padding:112px var(--pad) 0;max-width:1180px;margin:0 auto;pointer-events:none}
 .eyebrow{display:flex;align-items:center;gap:10px;color:var(--gold);font-size:12.5px;font-weight:700;letter-spacing:.4px}
 .eyebrow i{width:26px;height:1px;background:var(--gold)}
-.giant{font:700 clamp(92px,29vw,230px)/.95 'Amiri';letter-spacing:-2px;margin-top:10px}
-.giant2{font:700 clamp(48px,14.5vw,120px)/1.05 'Amiri';margin-top:-4px}
+.giant{font:var(--fdw) clamp(92px,29vw,230px) var(--fd);line-height:calc(.95 * var(--dlh));letter-spacing:var(--dls);margin-top:10px}
+.giant2{font:var(--fdw) clamp(48px,14.5vw,120px) var(--fd);line-height:calc(1.05 * var(--dlh));margin-top:-4px}
 .w{display:inline-block;opacity:0;transform:translateY(40px);animation:fadeup 1s var(--ease) forwards}
 .hbottom{position:absolute;z-index:3;left:0;right:0;bottom:26px;padding:0 var(--pad);display:flex;justify-content:space-between;align-items:flex-end;gap:14px;max-width:1180px;margin:0 auto}
 .hbottom p{font-size:14px;line-height:1.7;color:var(--ink2);max-width:230px}
@@ -74,14 +78,14 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 /* marquee */
 .marquee{position:relative;padding:18px 0 8px;overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line);direction:ltr}
 .mrow{display:flex;width:max-content;white-space:nowrap;will-change:transform}
-.mrow span{font:700 clamp(56px,16vw,130px)/1.15 'Amiri';padding:0 26px;direction:rtl}
-.mrow .dot{color:var(--gold);font:400 .38em/1 'Tajawal';vertical-align:middle;padding:0 4px}
+.mrow span{font:var(--fdw) clamp(56px,16vw,130px) var(--fd);line-height:calc(1.15 * var(--dlh));padding:0 26px;direction:rtl}
+.mrow .dot{color:var(--gold);font:400 .38em/1 var(--fb);vertical-align:middle;padding:0 4px}
 
 /* sections */
 .sec{padding:80px 0 10px;position:relative}
 .kicker{display:flex;align-items:center;gap:10px;color:var(--gold);font-size:12.5px;font-weight:700;margin-bottom:12px}
-.kicker b{font:400 12px 'Tajawal';color:var(--mute);direction:ltr}
-.h2{font:700 clamp(44px,12vw,96px)/1.05 'Amiri'}
+.kicker b{font:400 12px var(--fb);color:var(--mute);direction:ltr}
+.h2{font:var(--fdw) clamp(44px,12vw,96px) var(--fd);line-height:calc(1.08 * var(--dlh))}
 .lead{color:var(--mute);font-size:15px;line-height:1.8;margin-top:12px;max-width:520px}
 .rv{opacity:0;transform:translateY(40px)}
 
@@ -89,7 +93,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .stats{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--line);margin-top:30px}
 .stat{padding:22px 4px 8px;border-left:1px solid var(--line);text-align:center}
 .stat:last-child{border-left:0}
-.stat b{display:block;font:700 clamp(44px,13vw,84px)/1 'Amiri';color:var(--gold2);font-variant-numeric:tabular-nums}
+.stat b{display:block;font:var(--fdw) clamp(44px,13vw,84px) var(--fd);line-height:1;color:var(--gold2);font-variant-numeric:tabular-nums}
 .stat small{color:var(--mute);font-size:12.5px}
 
 /* deck of cards */
@@ -100,7 +104,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .dcard.drag{transition:none;cursor:grabbing}
 .dcard .cover{height:62%}
 .dcard .body{padding:18px 20px}
-.dcard .t{font-size:22px;font-weight:800;line-height:1.35}
+.dcard .t{font-size:22px;font-weight:var(--fbw);line-height:1.35}
 .dcard .where{color:var(--mute);font-size:13px;margin-top:4px}
 .dcard .pr{display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px}
 .dcard .pr b{font-size:27px;color:var(--gold2)}
@@ -117,7 +121,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .cover{position:relative;overflow:hidden;background:radial-gradient(90% 90% at 70% 10%,rgba(var(--acc-rgb),.22),transparent 60%),linear-gradient(160deg,var(--cover1),var(--cover2))}
 .cover svg{position:absolute;inset:0;width:100%;height:100%}
 .cover .meas{position:absolute;bottom:12px;right:14px;font-weight:800;font-size:14px;background:rgba(var(--bg-rgb),.6);padding:6px 10px;border-radius:10px;backdrop-filter:blur(6px)}
-.code{position:absolute;top:14px;left:14px;z-index:2;font:700 12px/1 'Tajawal';padding:7px 11px;border-radius:99px;background:rgba(var(--bg-rgb),.7);border:1px solid rgba(var(--acc-rgb),.4);color:var(--gold2);direction:ltr}
+.code{position:absolute;top:14px;left:14px;z-index:2;font:700 12px/1 var(--fb);padding:7px 11px;border-radius:99px;background:rgba(var(--bg-rgb),.7);border:1px solid rgba(var(--acc-rgb),.4);color:var(--gold2);direction:ltr}
 .tag{position:absolute;top:14px;right:14px;z-index:2;font-size:12px;font-weight:800;padding:6px 12px;border-radius:99px;background:var(--gold);color:var(--on-acc)}
 
 /* editorial index of listings */
@@ -129,7 +133,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 .index{padding:0 var(--pad);max-width:1180px;margin:0 auto}
 .row{position:relative;display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:center;padding:18px 0;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .row::after{content:"";position:absolute;inset:auto 0 0;height:1px;background:var(--line);transform-origin:right;transform:scaleX(var(--lx,0))}
-.row .n{font:400 12px 'Tajawal';color:var(--mute);direction:ltr}
+.row .n{font:400 12px var(--fb);color:var(--mute);direction:ltr}
 .row .t{font-size:18px;font-weight:700;line-height:1.35}
 .row .m{color:var(--mute);font-size:12.5px;margin-top:3px}
 .row .p{text-align:left;font-weight:800;font-size:17px;color:var(--gold2);white-space:nowrap}
@@ -142,7 +146,7 @@ button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 /* process */
 .steps{padding:10px var(--pad) 0;max-width:760px;margin:0 auto}
 .step{display:grid;grid-template-columns:auto 1fr;gap:18px;padding:22px 0;border-bottom:1px solid var(--line)}
-.step .num{font:700 58px/1 'Amiri';color:transparent;-webkit-text-stroke:1px var(--gold);min-width:64px;direction:ltr}
+.step .num{font:var(--fdw) 58px/1 var(--fd);color:transparent;-webkit-text-stroke:1px var(--gold);min-width:64px;direction:ltr}
 .step h3{font-size:20px;margin-bottom:6px}
 .step p{color:var(--mute);font-size:14.5px;line-height:1.75}
 
@@ -173,7 +177,7 @@ footer{padding:50px var(--pad) 130px;color:var(--mute);font-size:13px;line-heigh
 .sheet-body{overflow-y:auto;overscroll-behavior:contain;padding:0 20px calc(24px + env(safe-area-inset-bottom))}
 .sh-cover{height:210px;border-radius:20px;overflow:hidden;position:relative;margin-bottom:16px}
 .sh-cover .cover{height:100%}
-.sh-t{font-size:25px;font-weight:800;line-height:1.35}
+.sh-t{font-size:25px;font-weight:var(--fbw);line-height:1.35}
 .sh-where{color:var(--mute);font-size:14px;margin-top:4px}
 .sh-price{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:14px 0 6px}
 .sh-price b{font-size:32px;color:var(--gold2)}
@@ -197,12 +201,20 @@ html.lock .dock{transform:translateY(140%)!important}
 .pal{position:fixed;left:12px;top:74px;z-index:66;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .pal-btn{height:44px;padding:0 14px 0 10px;border-radius:99px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;
   background:rgba(var(--bg-rgb),.85);border:1px solid rgba(var(--acc-rgb),.5);color:var(--ink);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 10px 30px var(--shadow)}
-.pal-btn i{width:22px;height:22px;border-radius:50%;background:conic-gradient(#d9b35b 0 25%,#c9a45c 0 50%,#a8502b 0 75%,#d0925e 0);border:2px solid var(--ink)}
-.pal-list{display:none;flex-direction:column;gap:6px;padding:10px;border-radius:22px;background:rgba(var(--bg-rgb),.92);border:1px solid var(--line);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 20px 50px var(--shadow)}
+.pal-btn i{width:22px;height:22px;border-radius:50%;background:conic-gradient(#e6b84c 0 17%,#ff5b1f 0 34%,#1532c4 0 51%,#c8f43a 0 68%,#9c3a1c 0 85%,#140a24 0);border:2px solid var(--ink)}
+.pal-list{display:none;flex-direction:column;gap:8px;padding:12px;width:min(92vw,360px);max-height:calc(100svh - 150px);overflow-y:auto;overscroll-behavior:contain;border-radius:22px;background:rgba(var(--bg-rgb),.92);border:1px solid var(--line);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 20px 50px var(--shadow)}
 .pal.open .pal-list{display:flex}
-.sw{display:flex;align-items:center;gap:10px;padding:8px 12px 8px 8px;border-radius:14px;text-align:right;min-width:200px}
-.sw.on{background:rgba(var(--acc-rgb),.14)}
-.sw .dot2{flex:none;width:38px;height:38px;border-radius:50%;border:1px solid var(--line);position:relative;overflow:hidden}
+.pal-h{font-size:12px;font-weight:700;color:var(--gold);padding:4px 4px 0}
+.pal-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.sw{display:flex;align-items:center;gap:8px;padding:7px;border-radius:14px;text-align:right;border:1px solid transparent}
+.sw b{font-size:13px}
+.fp{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid var(--line);text-align:right}
+.fp.on{border-color:var(--gold);background:rgba(var(--acc-rgb),.12)}
+.fp .smp{font-size:26px;line-height:1.2}
+.fp small{display:block;font-size:11px;color:var(--mute);margin-top:2px}
+.fp .bd{font-size:12px;color:var(--ink2)}
+.sw.on{background:rgba(var(--acc-rgb),.14);border-color:var(--gold)}
+.sw .dot2{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);position:relative;overflow:hidden}
 .sw b{display:block;font-size:14px}
 .sw small{display:block;font-size:11.5px;color:var(--mute)}
 @media (prefers-reduced-motion: reduce){ .rv{opacity:1!important;transform:none!important} .intro{display:none} .w{opacity:1;transform:none;animation:none} }
@@ -307,7 +319,7 @@ html.lock .dock{transform:translateY(140%)!important}
   الأسعار والتوفر قابلة للتغيير. الأوراق تُعرض كاملة قبل أي عربون.
 </footer>
 
-<div class="pal" id="pal"><button class="pal-btn" id="palBtn" aria-expanded="false"><i></i>جرّب الألوان</button><div class="pal-list" id="palList"></div></div>
+<div class="pal" id="pal"><button class="pal-btn" id="palBtn" aria-expanded="false"><i></i>الألوان والخطوط</button><div class="pal-list" id="palList"></div></div>
 
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="تفاصيل العقار"><div class="grab" id="grab"><i></i></div><div class="sheet-body" id="sheetBody"></div></div>
@@ -333,17 +345,47 @@ const WA = 'https://wa.me/963996606813?text=';
 
 /* ================= palettes ================= */
 const PALETTES = {
-  olive: { name: 'زيتون وحجر', note: 'أرض وطبيعة يعفور · مقترح', bg: '#0f1b13', bg2: '#16261b', card: '#192a1e', sheet: '#15241a', ink: '#ece6d6', ink2: '#c9c3b1', mute: '#8e978a',
+  olive:   { name: 'زيتون وحجر', note: 'مقترح', bg: '#0f1b13', bg2: '#16261b', card: '#192a1e', sheet: '#15241a', ink: '#ece6d6', ink2: '#c9c3b1', mute: '#8e978a',
     acc: '#c9a45c', acc2: '#e9d096', acc3: '#7b6127', onAcc: '#101a10', cover1: '#1f3224', cover2: '#0c150f', shadow: 'rgba(0,0,0,.5)' },
-  night: { name: 'ذهب الليل', note: 'الألوان الحالية', bg: '#070707', bg2: '#101010', card: '#141414', sheet: '#121212', ink: '#efe9dc', ink2: '#c9c1b1', mute: '#8f887b',
-    acc: '#d9b35b', acc2: '#f4d98e', acc3: '#8c6b25', onAcc: '#161005', cover1: '#1c1913', cover2: '#0d0d0e', shadow: 'rgba(0,0,0,.55)' },
-  sand: { name: 'رمل وطين', note: 'فاتح · أسلوب المكاتب المعمارية', bg: '#f2ece1', bg2: '#e8e0d1', card: '#fbf8f2', sheet: '#f7f2e9', ink: '#1d1a16', ink2: '#4a443b', mute: '#7a7064',
-    acc: '#a8502b', acc2: '#c4663c', acc3: '#6b3017', onAcc: '#fff7ef', cover1: '#efe5d4', cover2: '#e0d2bb', shadow: 'rgba(90,55,25,.18)' },
-  navy: { name: 'كحلي ونحاس', note: 'فخامة كلاسيكية', bg: '#0a1020', bg2: '#0f1729', card: '#131c30', sheet: '#101829', ink: '#eef0f4', ink2: '#c3c8d3', mute: '#8a93a6',
-    acc: '#d0925e', acc2: '#ebb68b', acc3: '#8a5530', onAcc: '#1a0f06', cover1: '#18233a', cover2: '#0a0f1c', shadow: 'rgba(0,0,0,.55)' }
+  emerald: { name: 'زمرّد ملكي', note: 'جريء', bg: '#06231b', bg2: '#0a2e24', card: '#0b2f25', sheet: '#08281f', ink: '#f3ecd9', ink2: '#d2cab2', mute: '#93ad9f',
+    acc: '#e6b84c', acc2: '#f7d37a', acc3: '#9a7420', onAcc: '#1c1403', cover1: '#0f3d30', cover2: '#03160f', shadow: 'rgba(0,0,0,.5)' },
+  fire:    { name: 'نار برتقالية', note: 'جريء', bg: '#0b0b0b', bg2: '#141414', card: '#171717', sheet: '#131313', ink: '#f5f1ea', ink2: '#d2cbc0', mute: '#8f897f',
+    acc: '#ff5b1f', acc2: '#ff8a4c', acc3: '#b33300', onAcc: '#140600', cover1: '#24140c', cover2: '#0d0a08', shadow: 'rgba(0,0,0,.55)' },
+  clay:    { name: 'طين ساطع', note: 'جريء · ملوّن', bg: '#9c3a1c', bg2: '#8f3419', card: '#86301a', sheet: '#8a3219', ink: '#fff4e6', ink2: '#fbe3d0', mute: '#f7d3bd',
+    acc: '#ffd28a', acc2: '#ffe2b0', acc3: '#e0a24c', onAcc: '#3a1206', cover1: '#a8462a', cover2: '#6e2511', shadow: 'rgba(40,10,0,.4)' },
+  cobalt:  { name: 'كوبالت وأصفر', note: 'جريء · ملوّن', bg: '#1532c4', bg2: '#1a37cf', card: '#1029a8', sheet: '#1430b8', ink: '#ffffff', ink2: '#e3e8ff', mute: '#d0d7ff',
+    acc: '#ffd23f', acc2: '#ffe27a', acc3: '#d9a800', onAcc: '#0e1a5c', cover1: '#2446e0', cover2: '#0d2190', shadow: 'rgba(5,10,60,.45)' },
+  royal:   { name: 'بنفسجي ملكي', note: 'جريء', bg: '#140a24', bg2: '#1c1030', card: '#211338', sheet: '#1a0f2e', ink: '#f4eefc', ink2: '#d6cce8', mute: '#a193ba',
+    acc: '#f2c14e', acc2: '#ffd97a', acc3: '#a87b16', onAcc: '#1d1203', cover1: '#2c184a', cover2: '#0d0618', shadow: 'rgba(0,0,0,.55)' },
+  lime:    { name: 'ليموني حاد', note: 'جريء · عصري', bg: '#0a0a0a', bg2: '#131313', card: '#161616', sheet: '#121212', ink: '#f2f2ec', ink2: '#d0d0c6', mute: '#8e8e84',
+    acc: '#c8f43a', acc2: '#dcff6e', acc3: '#7fa316', onAcc: '#111800', cover1: '#1a2010', cover2: '#0a0c06', shadow: 'rgba(0,0,0,.55)' },
+  wine:    { name: 'خمري وشمبانيا', note: 'فاخر', bg: '#2a0812', bg2: '#330b17', card: '#3b0e1c', sheet: '#310b16', ink: '#f7ebe3', ink2: '#e0cbc2', mute: '#b8979a',
+    acc: '#e8c07a', acc2: '#f6dca6', acc3: '#a47a36', onAcc: '#2a0812', cover1: '#4a1224', cover2: '#180309', shadow: 'rgba(0,0,0,.5)' },
+  red:     { name: 'أحمر حيوي', note: 'فاتح · جريء', bg: '#f6f3ee', bg2: '#ece7df', card: '#ffffff', sheet: '#fbf9f5', ink: '#121212', ink2: '#3b3833', mute: '#6a645b',
+    acc: '#d9341a', acc2: '#b82a12', acc3: '#7d1a08', onAcc: '#ffffff', cover1: '#f3e7e2', cover2: '#e8d6ce', shadow: 'rgba(60,20,10,.14)' },
+  sand:    { name: 'رمل وطين', note: 'فاتح', bg: '#f2ece1', bg2: '#e8e0d1', card: '#fbf8f2', sheet: '#f7f2e9', ink: '#1d1a16', ink2: '#4a443b', mute: '#6b6155',
+    acc: '#a8502b', acc2: '#a4492a', acc3: '#6b3017', onAcc: '#fff7ef', cover1: '#efe5d4', cover2: '#e0d2bb', shadow: 'rgba(90,55,25,.18)' },
+  navy:    { name: 'كحلي ونحاس', note: 'كلاسيكي', bg: '#0a1020', bg2: '#0f1729', card: '#131c30', sheet: '#101829', ink: '#eef0f4', ink2: '#c3c8d3', mute: '#8a93a6',
+    acc: '#d0925e', acc2: '#ebb68b', acc3: '#8a5530', onAcc: '#1a0f06', cover1: '#18233a', cover2: '#0a0f1c', shadow: 'rgba(0,0,0,.55)' },
+  night:   { name: 'ذهب الليل', note: 'الحالي', bg: '#070707', bg2: '#101010', card: '#141414', sheet: '#121212', ink: '#efe9dc', ink2: '#c9c1b1', mute: '#8f887b',
+    acc: '#d9b35b', acc2: '#f4d98e', acc3: '#8c6b25', onAcc: '#161005', cover1: '#1c1913', cover2: '#0d0d0e', shadow: 'rgba(0,0,0,.55)' }
+};
+/* font pairs: one display face for headlines, one text face for everything else */
+const GF = 'https://fonts.googleapis.com/css2?display=swap&family=';
+const FONTS = {
+  classic:   { name: 'فخامة كلاسيكية', outline: true, pair: 'Amiri + Tajawal', fd: "'Amiri',serif", fb: "'Tajawal',sans-serif", fdw: 700, dlh: 1, dls: '-1px', fbw: 800,
+    url: GF + 'Amiri:wght@400;700&family=Tajawal:wght@300;400;500;700;800' },
+  modern:    { name: 'عصري هندسي', outline: false, pair: 'Reem Kufi + Readex Pro', fd: "'Reem Kufi',sans-serif", fb: "'Readex Pro',sans-serif", fdw: 700, dlh: 1.12, dls: '0px', fbw: 700,
+    url: GF + 'Reem+Kufi:wght@500;700&family=Readex+Pro:wght@300;400;500;700' },
+  bold:      { name: 'جريء عريض', outline: false, pair: 'Lalezar + Cairo', fd: "'Lalezar',sans-serif", fb: "'Cairo',sans-serif", fdw: 400, dlh: 1.12, dls: '0px', fbw: 800,
+    url: GF + 'Lalezar&family=Cairo:wght@400;600;700;800' },
+  architect: { name: 'معماري نظيف', outline: false, pair: 'Alexandria + IBM Plex Arabic', fd: "'Alexandria',sans-serif", fb: "'IBM Plex Sans Arabic',sans-serif", fdw: 800, dlh: 1.12, dls: '-1px', fbw: 700,
+    url: GF + 'Alexandria:wght@500;700;800&family=IBM+Plex+Sans+Arabic:wght@400;500;700' },
+  elegant:   { name: 'أنيق حديث', outline: true, pair: 'El Messiri + Almarai', fd: "'El Messiri',serif", fb: "'Almarai',sans-serif", fdw: 700, dlh: 1.1, dls: '0px', fbw: 800,
+    url: GF + 'El+Messiri:wght@500;700&family=Almarai:wght@400;700;800' }
 };
 const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-let THEME = null, THEME_KEY = 'olive';
+let THEME = null, THEME_KEY = 'olive', FONT_KEY = 'classic';
 function applyPalette(key, save = true) {
   const P = PALETTES[key] || PALETTES.olive; THEME_KEY = PALETTES[key] ? key : 'olive';
   const st = document.documentElement.style, set = (k, v) => st.setProperty(k, v);
@@ -359,16 +401,42 @@ function applyPalette(key, save = true) {
   if (window.READY) { renderDeck(); renderIndex(); }
   renderPalList();
 }
+function applyFont(key, save = true) {
+  const F = FONTS[key] || FONTS.classic; FONT_KEY = FONTS[key] ? key : 'classic';
+  const link = document.getElementById('fontLink'); if (link.href !== F.url) link.href = F.url;
+  const st = document.documentElement.style;
+  st.setProperty('--fd', F.fd); st.setProperty('--fb', F.fb); st.setProperty('--fdw', F.fdw);
+  document.documentElement.classList.toggle('solid', !F.outline);
+  st.setProperty('--dlh', F.dlh); st.setProperty('--dls', F.dls); st.setProperty('--fbw', F.fbw);
+  if (save) {
+    try { localStorage.setItem('mk-font', FONT_KEY); } catch (e) {}
+    const u = new URL(location.href); u.searchParams.set('f', FONT_KEY); history.replaceState(history.state, '', u);
+  }
+  renderPalList();
+}
+let samplesLoaded = false;
+function loadFontSamples() {   // every display face, only once the panel is opened
+  if (samplesLoaded) return; samplesLoaded = true;
+  const l = document.createElement('link'); l.rel = 'stylesheet';
+  l.href = GF + 'Amiri:wght@700&family=Reem+Kufi:wght@700&family=Lalezar&family=Alexandria:wght@800&family=El+Messiri:wght@700';
+  document.head.appendChild(l);
+}
 function renderPalList() {
   const el = document.getElementById('palList'); if (!el) return;
-  el.innerHTML = Object.entries(PALETTES).map(([k, P]) => `<button class="sw${k === THEME_KEY ? ' on' : ''}" data-p="${k}">
+  el.innerHTML = `<div class="pal-h">الألوان</div><div class="pal-grid">` + Object.entries(PALETTES).map(([k, P]) => `<button class="sw${k === THEME_KEY ? ' on' : ''}" data-p="${k}">
     <span class="dot2" style="background:linear-gradient(135deg,${P.bg} 0 50%,${P.acc} 50% 75%,${P.ink} 75%)"></span>
-    <span><b>${P.name}</b><small>${P.note}</small></span></button>`).join('');
+    <span><b>${P.name}</b><small>${P.note}</small></span></button>`).join('') + `</div>
+    <div class="pal-h">الخطوط</div>` + Object.entries(FONTS).map(([k, F]) => `<button class="fp${k === FONT_KEY ? ' on' : ''}" data-f="${k}">
+    <span><span class="smp" style="font-family:${F.fd.replace(/"/g, "'")};font-weight:${F.fdw}">يعفور</span><small>${F.pair}</small></span>
+    <span class="bd" style="font-family:${F.fb.replace(/"/g, "'")}">${F.name}<br>1.8 مليون $</span></button>`).join('');
 }
 (function initPalette() {
   let k = new URL(location.href).searchParams.get('p');
   if (!k) { try { k = localStorage.getItem('mk-palette'); } catch (e) {} }
   applyPalette(k || 'olive', false);
+  let f = new URL(location.href).searchParams.get('f');
+  if (!f) { try { f = localStorage.getItem('mk-font'); } catch (e) {} }
+  applyFont(f || 'classic', false);
 })();
 
 function cover(x, seed) {
@@ -632,8 +700,8 @@ addEventListener('pointerdown', e => { spot.style.setProperty('--sx', e.clientX 
 addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') setTimeout(() => spot.style.setProperty('--so', 0), 300); });
 
 /* ================= palette switcher ================= */
-$('palBtn').onclick = () => { const o = $('pal').classList.toggle('open'); $('palBtn').setAttribute('aria-expanded', o); };
-$('palList').onclick = e => { const b = e.target.closest('.sw'); if (b) applyPalette(b.dataset.p); };
+$('palBtn').onclick = () => { const o = $('pal').classList.toggle('open'); $('palBtn').setAttribute('aria-expanded', o); if (o) loadFontSamples(); };
+$('palList').onclick = e => { const b = e.target.closest('.sw'); if (b) return applyPalette(b.dataset.p); const f = e.target.closest('.fp'); if (f) applyFont(f.dataset.f); };
 
 /* ================= one loop for everything ================= */
 let REVEAL = [], COUNTS = [], ROWSEL = [];
