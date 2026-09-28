@@ -1,0 +1,633 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>عقارات يعفور وقرى الشام | محمد خالد - مستشار عقاري</title>
+<meta name="robots" content="noindex,follow">
+<link rel="canonical" href="https://aqarat-yaafour.github.io/">
+<meta name="theme-color" content="#070707">
+<link rel="icon" href="../favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@300;400;500;700;800&display=swap">
+<style>
+:root{
+  --bg:#070707; --bg2:#101010; --card:#141414; --line:rgba(239,233,220,.1);
+  --ink:#efe9dc; --mute:#8f887b; --gold:#d9b35b; --gold2:#f4d98e; --gold3:#8c6b25;
+  --pad:22px; --ease:cubic-bezier(.2,.8,.2,1);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{overflow-x:clip}
+#feat{overflow-x:clip}
+body{background:var(--bg);color:var(--ink);font-family:'Tajawal',system-ui,sans-serif;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+a{color:inherit;text-decoration:none}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+.serif{font-family:'Amiri',serif}
+.gtext{background:linear-gradient(100deg,var(--gold3),var(--gold2) 45%,var(--gold) 70%,var(--gold3));-webkit-background-clip:text;background-clip:text;color:transparent}
+.outline{color:transparent;-webkit-text-stroke:1.2px var(--gold)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 var(--pad)}
+
+/* intro curtain */
+.intro{position:fixed;inset:0;z-index:200;background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:18px;
+  animation:lift .9s var(--ease) 1.25s forwards}
+.intro b{font:700 34px 'Amiri';letter-spacing:.5px;opacity:0;animation:fadeup .7s var(--ease) .15s forwards}
+.intro i{display:block;width:160px;height:1px;background:var(--gold);transform:scaleX(0);animation:draw .9s var(--ease) .3s forwards}
+.intro small{color:var(--mute);font-size:12px;letter-spacing:3px;opacity:0;animation:fadeup .7s var(--ease) .45s forwards}
+@keyframes lift{to{transform:translateY(-100%)}}
+@keyframes draw{to{transform:scaleX(1)}}
+@keyframes fadeup{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+.seen .intro{display:none}
+
+/* spotlight following the finger / cursor */
+.spot{position:fixed;inset:0;z-index:70;pointer-events:none;opacity:var(--so,0);transition:opacity .5s;
+  background:radial-gradient(260px circle at var(--sx,50%) var(--sy,50%),rgba(244,217,142,.10),transparent 70%)}
+
+/* nav */
+.nav{position:fixed;inset:0 0 auto;z-index:60;display:flex;justify-content:space-between;align-items:center;padding:14px var(--pad)}
+.nav::before{content:"";position:absolute;inset:0;background:rgba(7,7,7,.72);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-bottom:1px solid var(--line);opacity:var(--navbg,0)}
+.brand{position:relative;display:flex;align-items:center;gap:10px}
+.brand img{width:38px;height:38px;border-radius:50%;object-fit:cover;border:1px solid var(--gold)}
+.brand b{font-size:16px;display:block}
+.brand small{font-size:11.5px;color:var(--mute)}
+.nav .wa{position:relative;height:38px;padding:0 16px;border-radius:99px;display:flex;align-items:center;font-weight:700;font-size:14px;border:1px solid rgba(217,179,91,.5);color:var(--gold2)}
+
+/* hero with live terrain */
+.hero{position:relative;height:100svh;min-height:620px;overflow:hidden;touch-action:pan-y}
+#terrain{position:absolute;inset:0;width:100%;height:100%;display:block}
+.hero::after{content:"";position:absolute;inset:auto 0 0;height:30%;background:linear-gradient(transparent,var(--bg));pointer-events:none}
+.hcopy{position:absolute;inset:0;z-index:2;display:flex;flex-direction:column;justify-content:flex-start;padding:112px var(--pad) 0;max-width:1180px;margin:0 auto;pointer-events:none}
+.eyebrow{display:flex;align-items:center;gap:10px;color:var(--gold);font-size:12.5px;font-weight:700;letter-spacing:.4px}
+.eyebrow i{width:26px;height:1px;background:var(--gold)}
+.giant{font:700 clamp(92px,29vw,230px)/.95 'Amiri';letter-spacing:-2px;margin-top:10px}
+.giant2{font:700 clamp(48px,14.5vw,120px)/1.05 'Amiri';margin-top:-4px}
+.w{display:inline-block;opacity:0;transform:translateY(40px);animation:fadeup 1s var(--ease) forwards}
+.hbottom{position:absolute;z-index:3;left:0;right:0;bottom:26px;padding:0 var(--pad);display:flex;justify-content:space-between;align-items:flex-end;gap:14px;max-width:1180px;margin:0 auto}
+.hbottom p{font-size:14px;line-height:1.7;color:#c9c1b1;max-width:230px}
+.round{flex:none;width:92px;height:92px;border-radius:50%;background:linear-gradient(140deg,var(--gold2),var(--gold) 55%,var(--gold3));color:#161005;display:flex;align-items:center;justify-content:center;text-align:center;font-weight:800;font-size:13px;line-height:1.35;box-shadow:0 18px 50px rgba(217,179,91,.3)}
+.round span{display:block}
+.touchhint{position:absolute;z-index:3;top:62%;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;font-size:12px;color:var(--mute);background:rgba(7,7,7,.55);padding:8px 14px;border-radius:99px;border:1px solid var(--line);backdrop-filter:blur(6px);transition:opacity .6s}
+.touchhint i{width:8px;height:8px;border-radius:50%;background:var(--gold);box-shadow:0 0 0 0 rgba(217,179,91,.6);animation:ping 1.6s infinite}
+@keyframes ping{to{box-shadow:0 0 0 12px rgba(217,179,91,0)}}
+
+/* marquee */
+.marquee{position:relative;padding:18px 0 8px;overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line);direction:ltr}
+.mrow{display:flex;width:max-content;white-space:nowrap;will-change:transform}
+.mrow span{font:700 clamp(56px,16vw,130px)/1.15 'Amiri';padding:0 26px;direction:rtl}
+.mrow .dot{color:var(--gold);font:400 .38em/1 'Tajawal';vertical-align:middle;padding:0 4px}
+
+/* sections */
+.sec{padding:80px 0 10px;position:relative}
+.kicker{display:flex;align-items:center;gap:10px;color:var(--gold);font-size:12.5px;font-weight:700;margin-bottom:12px}
+.kicker b{font:400 12px 'Tajawal';color:var(--mute);direction:ltr}
+.h2{font:700 clamp(44px,12vw,96px)/1.05 'Amiri'}
+.lead{color:var(--mute);font-size:15px;line-height:1.8;margin-top:12px;max-width:520px}
+.rv{opacity:0;transform:translateY(40px)}
+
+/* stats */
+.stats{display:grid;grid-template-columns:1fr 1fr 1fr;border-top:1px solid var(--line);margin-top:30px}
+.stat{padding:22px 4px 8px;border-left:1px solid var(--line);text-align:center}
+.stat:last-child{border-left:0}
+.stat b{display:block;font:700 clamp(44px,13vw,84px)/1 'Amiri';color:var(--gold2);font-variant-numeric:tabular-nums}
+.stat small{color:var(--mute);font-size:12.5px}
+
+/* deck of cards */
+.deck-wrap{position:relative;padding:34px 0 10px}
+.deck{position:relative;width:min(80vw,360px);height:min(116vw,500px);margin:0 auto;touch-action:pan-y;user-select:none;-webkit-user-select:none}
+.dcard{position:absolute;inset:0;border-radius:30px;overflow:hidden;background:var(--card);border:1px solid rgba(239,233,220,.12);
+  box-shadow:0 30px 70px rgba(0,0,0,.55);transition:transform .55s var(--ease),opacity .4s;will-change:transform;cursor:grab}
+.dcard.drag{transition:none;cursor:grabbing}
+.dcard .cover{height:62%}
+.dcard .body{padding:18px 20px}
+.dcard .t{font-size:22px;font-weight:800;line-height:1.35}
+.dcard .where{color:var(--mute);font-size:13px;margin-top:4px}
+.dcard .pr{display:flex;justify-content:space-between;align-items:flex-end;margin-top:14px}
+.dcard .pr b{font-size:27px;color:var(--gold2)}
+.dcard .pr small{color:var(--mute);font-size:12px}
+.stamp{position:absolute;top:26px;z-index:5;padding:6px 14px;border:2px solid;border-radius:10px;font-weight:800;font-size:18px;opacity:0;transform:rotate(-12deg)}
+.stamp.like{left:22px;color:#25d366;border-color:#25d366}
+.stamp.next{right:22px;color:var(--gold2);border-color:var(--gold2);transform:rotate(12deg)}
+.deck-ui{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:26px}
+.deck-ui button{width:56px;height:56px;border-radius:50%;border:1px solid var(--line);background:var(--bg2);display:flex;align-items:center;justify-content:center}
+.deck-ui .open{width:auto;padding:0 22px;border-radius:99px;height:56px;background:var(--ink);color:#111;font-weight:800}
+.deck-count{text-align:center;color:var(--mute);font-size:13px;margin-top:14px;direction:ltr}
+
+/* covers (line art per property type) */
+.cover{position:relative;overflow:hidden;background:radial-gradient(90% 90% at 70% 10%,rgba(217,179,91,.22),transparent 60%),linear-gradient(160deg,#1c1913,#0d0d0e)}
+.cover svg{position:absolute;inset:0;width:100%;height:100%}
+.cover .meas{position:absolute;bottom:12px;right:14px;font-weight:800;font-size:14px;background:rgba(7,7,7,.6);padding:6px 10px;border-radius:10px;backdrop-filter:blur(6px)}
+.code{position:absolute;top:14px;left:14px;z-index:2;font:700 12px/1 'Tajawal';padding:7px 11px;border-radius:99px;background:rgba(7,7,7,.7);border:1px solid rgba(217,179,91,.4);color:var(--gold2);direction:ltr}
+.tag{position:absolute;top:14px;right:14px;z-index:2;font-size:12px;font-weight:800;padding:6px 12px;border-radius:99px;background:var(--gold);color:#161005}
+
+/* editorial index of listings */
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding:18px var(--pad) 8px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;height:38px;padding:0 16px;border-radius:99px;border:1px solid var(--line);color:#d8d0c0;font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px}
+.chip.on{background:var(--ink);color:#111;border-color:var(--ink)}
+.chip em{font-style:normal;font-size:11px;opacity:.6}
+.index{padding:0 var(--pad);max-width:1180px;margin:0 auto}
+.row{position:relative;display:grid;grid-template-columns:30px 1fr auto;gap:12px;align-items:center;padding:18px 0;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.row::after{content:"";position:absolute;inset:auto 0 0;height:1px;background:var(--line);transform-origin:right;transform:scaleX(var(--lx,0))}
+.row .n{font:400 12px 'Tajawal';color:var(--mute);direction:ltr}
+.row .t{font-size:18px;font-weight:700;line-height:1.35}
+.row .m{color:var(--mute);font-size:12.5px;margin-top:3px}
+.row .p{text-align:left;font-weight:800;font-size:17px;color:var(--gold2);white-space:nowrap}
+.row .p small{display:block;font-weight:500;font-size:11px;color:var(--mute)}
+.row .thumb{position:absolute;left:0;top:50%;width:120px;height:84px;border-radius:14px;overflow:hidden;pointer-events:none;opacity:0;transform:translate(-10px,-50%) scale(.9);transition:opacity .3s,transform .4s var(--ease)}
+.row .thumb .cover{height:100%}
+.row:active{background:rgba(239,233,220,.03)}
+@media(hover:hover){.row:hover .thumb{opacity:1;transform:translate(-130px,-50%) scale(1)}}
+
+/* process */
+.steps{padding:10px var(--pad) 0;max-width:760px;margin:0 auto}
+.step{display:grid;grid-template-columns:auto 1fr;gap:18px;padding:22px 0;border-bottom:1px solid var(--line)}
+.step .num{font:700 58px/1 'Amiri';color:transparent;-webkit-text-stroke:1px var(--gold);min-width:64px;direction:ltr}
+.step h3{font-size:20px;margin-bottom:6px}
+.step p{color:var(--mute);font-size:14.5px;line-height:1.75}
+
+/* circle-reveal CTA */
+.reveal{position:relative;height:170vh}
+.reveal-in{position:sticky;top:0;height:100svh;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.circle{position:absolute;inset:0;background:linear-gradient(150deg,var(--gold2),var(--gold) 50%,var(--gold3));color:#140f05;clip-path:circle(var(--cr,6%) at 50% 50%);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:0 26px}
+.circle .h2{font-size:clamp(46px,13vw,104px)}
+.circle p{font-size:16px;margin-top:10px;opacity:.8}
+.circle a{margin-top:26px;height:58px;padding:0 28px;border-radius:99px;background:#140f05;color:var(--gold2);display:inline-flex;align-items:center;font-weight:800}
+footer{padding:50px var(--pad) 130px;color:var(--mute);font-size:13px;line-height:2;text-align:center}
+
+/* dock */
+.dock{position:fixed;left:12px;right:12px;bottom:12px;z-index:65;display:grid;grid-template-columns:1fr 60px;gap:8px;transform:translateY(calc((1 - var(--dock,0)) * 140%))}
+.dock a{height:56px;border-radius:18px;display:flex;align-items:center;justify-content:center;gap:10px;font-weight:800}
+.dock .wa{background:#25d366;color:#062b12;box-shadow:0 12px 30px rgba(0,0,0,.45)}
+.dock .call{background:rgba(20,20,20,.9);border:1px solid var(--line);backdrop-filter:blur(10px)}
+@media(min-width:900px){.dock{display:none}}
+
+/* quick-view sheet */
+.sheet-bg{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .35s}
+.sheet-bg.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:90;max-height:92svh;display:flex;flex-direction:column;background:#121212;border:1px solid rgba(217,179,91,.3);border-bottom:0;border-radius:28px 28px 0 0;transform:translateY(105%);transition:transform .5s cubic-bezier(.2,.9,.2,1);box-shadow:0 -30px 80px rgba(0,0,0,.6);visibility:hidden}
+.sheet.on{transform:translateY(0);visibility:visible}
+.sheet.drag{transition:none}
+.grab{flex:none;padding:12px 0 10px;display:flex;justify-content:center;touch-action:none;cursor:grab}
+.grab i{width:46px;height:5px;border-radius:3px;background:rgba(255,255,255,.28)}
+.sheet-body{overflow-y:auto;overscroll-behavior:contain;padding:0 20px calc(24px + env(safe-area-inset-bottom))}
+.sh-cover{height:210px;border-radius:20px;overflow:hidden;position:relative;margin-bottom:16px}
+.sh-cover .cover{height:100%}
+.sh-t{font-size:25px;font-weight:800;line-height:1.35}
+.sh-where{color:var(--mute);font-size:14px;margin-top:4px}
+.sh-price{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:14px 0 6px}
+.sh-price b{font-size:32px;color:var(--gold2)}
+.sh-price small{color:var(--mute);font-size:13px}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
+.fact{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.fact small{display:block;color:var(--mute);font-size:12px;margin-bottom:2px}
+.fact b{font-size:16px}
+.feats{display:flex;flex-wrap:wrap;gap:6px}
+.feats span{font-size:13px;padding:6px 12px;border-radius:99px;border:1px solid rgba(217,179,91,.35);color:var(--gold2)}
+.sh-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.sh-actions a,.sh-share{height:54px;border-radius:99px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14.5px;white-space:nowrap}
+.sh-actions .wa{background:#25d366;color:#062b12}
+.sh-actions .more,.sh-share{border:1px solid var(--line)}
+.sh-share{width:100%;margin-top:10px}
+html.lock{overflow:hidden}
+html.lock .dock{transform:translateY(140%)!important}
+@media(min-width:760px){.sheet{left:50%;right:auto;width:560px;margin-left:-280px}}
+
+@media (prefers-reduced-motion: reduce){ .rv{opacity:1!important;transform:none!important} .intro{display:none} .w{opacity:1;transform:none;animation:none} }
+</style>
+</head>
+<body>
+<script>try{if(sessionStorage.getItem('seen3'))document.documentElement.classList.add('seen');sessionStorage.setItem('seen3','1')}catch(e){}</script>
+
+<div class="intro" aria-hidden="true"><b>محمد خالد</b><i></i><small>REAL ESTATE · YAAFOUR</small></div>
+<div class="spot" id="spot"></div>
+
+<header class="nav">
+  <a class="brand" href="#"><img src="../img/mohammad-khaled.jpg" width="38" height="38" alt="محمد خالد"><span><b>محمد خالد</b><small>مستشار عقاري</small></span></a>
+  <a class="wa" data-wa href="https://wa.me/963996606813">واتساب</a>
+</header>
+
+<section class="hero" id="hero">
+  <canvas id="terrain" aria-hidden="true"></canvas>
+  <div class="hcopy" id="hcopy">
+    <div class="eyebrow"><i></i>عقارات مختارة · ريف دمشق</div>
+    <h1>
+      <div class="giant"><span class="w" style="animation-delay:1.35s">يعفور</span></div>
+      <div class="giant2"><span class="w outline" style="animation-delay:1.5s">وقرى</span> <span class="w gtext" style="animation-delay:1.62s">الشام</span></div>
+    </h1>
+  </div>
+  <div class="touchhint" id="thint"><i></i>المس الأرض</div>
+  <div class="hbottom">
+    <p class="w" style="animation-delay:1.8s">أراضٍ وفلل ومزارع — معاينة، تدقيق أوراق، ومرافقة حتى التسجيل.</p>
+    <a class="round w" data-wa href="https://wa.me/963996606813" style="animation-delay:1.9s"><span>تواصل<br>الآن</span></a>
+  </div>
+</section>
+
+<div class="marquee" aria-hidden="true">
+  <div class="mrow" id="m1"></div>
+  <div class="mrow" id="m2"></div>
+</div>
+
+<section class="sec">
+  <div class="wrap">
+    <div class="kicker rv">بالأرقام <b>01</b></div>
+    <h2 class="h2 rv">أرضك <span class="gtext">موجودة هنا</span></h2>
+    <div class="stats">
+      <div class="stat rv"><b data-count="19" id="stCount">0</b><small>عقاراً متاحاً</small></div>
+      <div class="stat rv"><b data-count="100" id="stMax">0</b><small>دنم أكبر أرض</small></div>
+      <div class="stat rv"><b data-count="2" id="stAreas">0</b><small>مناطق</small></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="feat">
+  <div class="wrap">
+    <div class="kicker rv">مختارات <b>02</b></div>
+    <h2 class="h2 rv">اسحب <span class="outline">البطاقة</span></h2>
+    <p class="lead rv">اسحب يميناً أو يساراً لتقلّب العقارات، والمس البطاقة لتفتح تفاصيلها.</p>
+  </div>
+  <div class="deck-wrap">
+    <div class="deck" id="deck"></div>
+    <div class="deck-ui">
+      <button id="dPrev" aria-label="السابق"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <button class="open" id="dOpen">التفاصيل</button>
+      <button id="dNext" aria-label="التالي"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+    </div>
+    <div class="deck-count" id="dCount"></div>
+  </div>
+</section>
+
+<section class="sec" id="all">
+  <div class="wrap">
+    <div class="kicker rv">كل العقارات <b>03</b></div>
+    <h2 class="h2 rv">الفهرس</h2>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="index" id="index"></div>
+</section>
+
+<section class="sec">
+  <div class="wrap">
+    <div class="kicker rv">كيف أعمل <b>04</b></div>
+    <h2 class="h2 rv">من المعاينة<br><span class="gtext">حتى التسجيل</span></h2>
+  </div>
+  <div class="steps">
+    <div class="step rv"><div class="num">01</div><div><h3>نحدد طلبك</h3><p>المنطقة، النوع، المساحة والميزانية — وأرشّح لك ما يناسبك فقط.</p></div></div>
+    <div class="step rv"><div class="num">02</div><div><h3>معاينة أو جولة فيديو</h3><p>على الأرض، أو جولة مباشرة بالفيديو إن كنت خارج سوريا.</p></div></div>
+    <div class="step rv"><div class="num">03</div><div><h3>تدقيق الأوراق</h3><p>نتحقق من الملكية والإشارات والترخيص قبل أي عربون.</p></div></div>
+    <div class="step rv"><div class="num">04</div><div><h3>التسجيل والتسليم</h3><p>مرافقة كاملة حتى يُسجَّل العقار باسمك.</p></div></div>
+  </div>
+</section>
+
+<section class="reveal" id="reveal">
+  <div class="reveal-in">
+    <div class="circle" id="circle">
+      <div class="h2">قلّي شو بدك،<br>وأنا بدوّرلك</div>
+      <p>أرسل طلبك وأرشّح لك العقارات المناسبة خلال يوم.</p>
+      <a data-wa href="https://wa.me/963996606813">أرسل طلبك على واتساب</a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <b style="color:var(--ink)">محمد خالد</b> · مستشار عقاري · يعفور وقرى الشام · ريف دمشق<br>
+  واتساب: <span dir="ltr">0996 606 813</span><br>
+  الأسعار والتوفر قابلة للتغيير. الأوراق تُعرض كاملة قبل أي عربون.
+</footer>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="تفاصيل العقار"><div class="grab" id="grab"><i></i></div><div class="sheet-body" id="sheetBody"></div></div>
+
+<nav class="dock">
+  <a class="wa" data-wa href="https://wa.me/963996606813"><svg width="22" height="22" viewBox="0 0 32 32"><path fill="currentColor" d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3zm5.8 15.7c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1a8.7 8.7 0 0 1-4.3-3.8c-.3-.6.3-.5.9-1.7a.6.6 0 0 0 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4 3.6 3.6 0 0 0-1.1 2.7 6.3 6.3 0 0 0 1.3 3.3 14.4 14.4 0 0 0 5.5 4.9c2 .9 2.8.9 3.8.8a3.3 3.3 0 0 0 2.1-1.5 2.7 2.7 0 0 0 .2-1.5c-.1-.2-.3-.3-.6-.4z"/></svg>تواصل على واتساب</a>
+  <a class="call" href="tel:+963996606813" aria-label="اتصال"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f4d98e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg></a>
+</nav>
+
+<script>
+const $ = id => document.getElementById(id);
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const eo = x => 1 - Math.pow(1 - x, 3);
+const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const TYPES = { land: 'أرض', villa: 'فيلا', farm: 'مزرعة', apt: 'شقة' };
+const FEATURED = ['MK-003', 'MK-012', 'MK-011', 'MK-015', 'MK-018', 'MK-001'];
+const num = n => (Math.round(n * 10) / 10).toString();
+const money = n => n >= 1e6 ? `${num(n / 1e6)} مليون $` : `${num(n / 1e3)} ألف $`;
+const size = x => x.area_m2 ? (x.area_m2 >= 1000 ? `${num(x.area_m2 / 1000)} دنم` : `${x.area_m2} م²`) : (x.bua ? `${x.bua} م² بناء` : '');
+const price = x => x.mode === 'dunam' ? { main: money(x.price), note: `للدنم · الإجمالي ${money(x.total)}` } : { main: money(x.price), note: 'السعر الإجمالي' };
+const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const WA = 'https://wa.me/963996606813?text=';
+
+function cover(x, seed) {
+  const r = n => (Math.sin(seed * 9.1 + n * 3.7) + 1) / 2, g = '#d9b35b';
+  let art = '';
+  if (x.cat === 'land') {
+    for (let i = 0; i < 8; i++) art += `<path d="M-20 ${110 + i * 24 + r(i) * 10} C 80 ${90 + i * 23} 180 ${140 + i * 22 - r(i + 2) * 30} 420 ${100 + i * 26}" stroke="${g}" stroke-opacity="${.16 + i * .05}" fill="none"/>`;
+    art += `<rect x="${110 + r(1) * 40}" y="${60 + r(2) * 20}" width="150" height="110" fill="none" stroke="${g}" stroke-width="1.5" stroke-dasharray="6 6" transform="rotate(${-8 + r(3) * 16} 200 120)"/>`;
+  } else if (x.cat === 'villa') {
+    art += `<path d="M60 240 H340" stroke="${g}" stroke-opacity=".4"/><rect x="90" y="130" width="150" height="110" fill="none" stroke="${g}" stroke-width="1.6"/><rect x="200" y="85" width="110" height="155" fill="none" stroke="${g}" stroke-width="1.6"/><path d="M80 130 H250 M190 85 H320" stroke="${g}" stroke-width="3"/><rect x="215" y="110" width="36" height="46" fill="${g}" fill-opacity=".18" stroke="${g}"/><rect x="258" y="110" width="36" height="46" fill="${g}" fill-opacity=".18" stroke="${g}"/><rect x="110" y="160" width="46" height="34" fill="${g}" fill-opacity=".18" stroke="${g}"/><rect x="70" y="252" width="200" height="20" rx="6" fill="#3fa9c9" fill-opacity=".25" stroke="#5cc3de" stroke-opacity=".6"/>`;
+  } else if (x.cat === 'farm') {
+    art += `<path d="M20 235 C120 220 260 240 380 226" stroke="${g}" stroke-opacity=".4" fill="none"/>`;
+    for (let i = 0; i < 9; i++) { const cx = 30 + i * 42 + r(i) * 10, cy = 195 + r(i + 5) * 20, rr = 16 + r(i + 1) * 12; art += `<circle cx="${cx}" cy="${cy}" r="${rr}" fill="${g}" fill-opacity=".1" stroke="${g}" stroke-opacity=".55"/><path d="M${cx} ${cy + rr} V${cy + rr + 14}" stroke="${g}" stroke-opacity=".5"/>`; }
+    art += `<path d="M150 140 L200 102 L250 140 V180 H150Z" fill="#17150f" stroke="${g}" stroke-width="1.6"/>`;
+  } else {
+    art += `<rect x="130" y="50" width="140" height="200" fill="none" stroke="${g}" stroke-width="1.6"/>`;
+    for (let yy = 70; yy < 230; yy += 30) for (let xx = 145; xx < 260; xx += 32) art += `<rect x="${xx}" y="${yy}" width="20" height="16" fill="${g}" fill-opacity="${.08 + r(xx + yy) * .25}" stroke="${g}" stroke-opacity=".5"/>`;
+  }
+  return `<div class="cover"><svg viewBox="0 0 400 290" preserveAspectRatio="xMidYMid slice">${art}</svg><span class="meas">${size(x)}</span></div>`;
+}
+
+/* ================= live terrain (canvas) ================= */
+const cv = $('terrain'), ctx = cv.getContext('2d');
+let W = 0, H = 0, DPR = 1;
+function resize() {
+  DPR = Math.min(2, devicePixelRatio || 1);
+  W = cv.clientWidth; H = cv.clientHeight;
+  cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+}
+resize();
+const COLS = 46, ROWS = 34;
+const ripples = [];          // {x, z, t0}
+let tiltX = 0, tiltTarget = 0, heroVisible = true;
+function height(x, z, t) {
+  let h = Math.sin(x * 2.1 + z * 1.3 + t * .35) * .55 + Math.sin(x * 4.7 - z * 2.2 + t * .25) * .22 + Math.sin(z * 3.1 - t * .55 + x) * .28;
+  h += Math.max(0, 1 - Math.abs(x) * .9) * .35;                 // a gentle valley ridge in the middle
+  return h;
+}
+// ripples live in screen space so a touch near the viewer never blows up into a spike
+function ripple(x, z, t) {
+  let r = 0;
+  for (const p of ripples) {
+    const age = t - p.t0, d = Math.hypot(x - p.x, (z - p.z) * 1.6);
+    r += Math.sin(d * 14 - age * 6) * Math.exp(-d * 2.4) * Math.exp(-age * .9) * clamp(age * 3);
+  }
+  return Math.max(-1, Math.min(1, r));   // overlapping ripples never stack into a wall
+}
+function project(x, z, h, rp) {
+  const zz = 0.22 + z * 1.9;                 // depth
+  const s = 1 / zz;
+  return [W / 2 + (x + tiltX * (1 - z) * .25) * W * .62 * s, H * .5 + s * H * .075 - h * H * .075 * s - rp * H * .035 * Math.min(s, 1.5)];
+}
+let T0 = performance.now();
+function drawTerrain(now) {
+  const t = (now - T0) / 1000, speed = t * .12 + scrollY * .0009;
+  ctx.fillStyle = '#070707'; ctx.fillRect(0, 0, W, H);
+  // glow above the horizon
+  const gr = ctx.createRadialGradient(W * .7, H * .38, 10, W * .7, H * .38, W * .9);
+  gr.addColorStop(0, 'rgba(217,179,91,.18)'); gr.addColorStop(1, 'rgba(7,7,7,0)');
+  ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+  for (let j = ROWS - 1; j >= 0; j--) {          // far to near: painter's algorithm hides lines behind hills
+    const z = j / (ROWS - 1);
+    ctx.beginPath();
+    for (let i = 0; i <= COLS; i++) {
+      const x = (i / COLS) * 2.6 - 1.3;
+      const [sx, sy] = project(x, z, height(x, z + speed * 3, t), ripple(x, z + speed * 3, t));
+      if (!i) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
+    }
+    ctx.lineTo(W + 50, H + 50); ctx.lineTo(-50, H + 50); ctx.closePath();
+    ctx.fillStyle = '#070707'; ctx.fill();
+    const a = (1 - z) * .85 + .08;
+    ctx.strokeStyle = `rgba(${217 + (1 - z) * 27},${179 + (1 - z) * 38},${91 + (1 - z) * 50},${a})`;
+    ctx.lineWidth = .6 + (1 - z) * 1.2;
+    ctx.stroke();
+  }
+  while (ripples.length && t - ripples[0].t0 > 4) ripples.shift();
+}
+// touch the land -> ripple where you touched
+function screenToWorld(px, py) {
+  const s = clamp((py - H * .5) / (H * .075), .6, 4.5);
+  const zz = 1 / s, z = clamp((zz - .22) / 1.9, 0, 1);
+  return { x: (px - W / 2) / (W * .62 * s), z };
+}
+let lastRipple = 0;
+function addRipple(e) {
+  const r = cv.getBoundingClientRect(), now = performance.now();
+  if (now - lastRipple < 180) return; lastRipple = now;
+  const w = screenToWorld(e.clientX - r.left, e.clientY - r.top);
+  const speed = (now - T0) / 1000 * .12 + scrollY * .0009;
+  ripples.push({ x: w.x, z: w.z + speed * 3, t0: (now - T0) / 1000 });
+  if (ripples.length > 4) ripples.shift();
+  $('thint').style.opacity = 0;
+}
+$('hero').addEventListener('pointerdown', addRipple);
+$('hero').addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || e.buttons) addRipple(e); });
+addEventListener('deviceorientation', e => { if (e.gamma != null) tiltTarget = clamp(e.gamma / 30, -1, 1); });
+setTimeout(() => { const h = $('thint'); if (h) h.style.opacity = 0; }, 7000);
+
+/* ================= marquee driven by scroll speed ================= */
+function fillMarquee(el, outline) {
+  const words = ['يعفور', 'قرى الشام', 'الصبورة', 'أراضٍ', 'فلل', 'مزارع'];
+  const chunk = words.map(w => `<span class="${outline ? 'outline' : ''}">${w}</span><span class="dot">✦</span>`).join('');
+  el.innerHTML = chunk + chunk + chunk;
+}
+fillMarquee($('m1'), false); fillMarquee($('m2'), true);
+let m1x = 0, m2x = 0;
+
+/* ================= deck of cards ================= */
+let DATA = [], DECK = [], order = [];
+function renderDeck() {
+  let f = FEATURED.map(c => DATA.find(x => x.code === c)).filter(Boolean);
+  if (f.length < 4) f = [...DATA].sort((a, b) => (b.total || b.price) - (a.total || a.price)).slice(0, 6);
+  DECK = f; order = f.map((_, i) => i);
+  $('deck').innerHTML = f.map((x, i) => {
+    const p = price(x);
+    return `<div class="dcard" data-i="${i}" data-code="${x.code}">
+      <span class="code">${x.code}</span><span class="tag">${TYPES[x.cat]}</span>${cover(x, i + 1)}
+      <div class="body"><div class="t">${esc(x.title)}</div><div class="where">${esc(x.area)} · ريف دمشق</div>
+      <div class="pr"><b>${p.main}</b><small>${p.note}</small></div></div></div>`;
+  }).join('');
+  layoutDeck();
+}
+function cards() { return [...$('deck').children]; }
+function layoutDeck() {
+  const cs = cards();
+  order.forEach((ci, pos) => {
+    const c = cs[ci];
+    c.style.zIndex = 50 - pos;
+    c.style.opacity = pos > 3 ? 0 : 1;
+    const rot = pos === 0 ? 0 : (pos % 2 ? -1 : 1) * (2 + pos * 1.2);
+    c.style.transform = `translateY(${pos * 16}px) scale(${1 - pos * .055}) rotate(${rot}deg)`;
+  });
+  $('dCount').textContent = `${order[0] + 1} / ${DECK.length}`;
+}
+function throwTop(dir) {
+  const c = cards()[order[0]];
+  c.classList.remove('drag');
+  c.style.transform = `translate(${dir * 130}vw, 40px) rotate(${dir * 28}deg)`;
+  c.style.opacity = 0;
+  order.push(order.shift());
+  setTimeout(layoutDeck, 260);
+}
+function backOne() { order.unshift(order.pop()); layoutDeck(); }
+(function deckDrag() {
+  const deck = $('deck');
+  let sx = 0, sy = 0, dx = 0, dy = 0, t0 = 0, active = null, moved = false;
+  deck.addEventListener('pointerdown', e => {
+    const c = e.target.closest('.dcard'); if (!c || +c.dataset.i !== order[0]) return;
+    active = c; sx = e.clientX; sy = e.clientY; dx = dy = 0; t0 = performance.now(); moved = false;
+    c.classList.add('drag'); c.setPointerCapture(e.pointerId);
+  });
+  deck.addEventListener('pointermove', e => {
+    if (!active) return;
+    dx = e.clientX - sx; dy = e.clientY - sy; if (Math.hypot(dx, dy) > 6) moved = true;
+    active.style.transform = `translate(${dx}px, ${dy * .4}px) rotate(${dx * .07}deg)`;
+    // cards underneath rise as the top card leaves
+    const k = clamp(Math.abs(dx) / 160);
+    order.slice(1, 4).forEach((ci, p) => { const pos = p + 1 - k; cards()[ci].style.transform = `translateY(${pos * 16}px) scale(${1 - pos * .055})`; });
+  });
+  const end = e => {
+    if (!active) return;
+    const c = active; active = null;
+    const v = Math.abs(dx) / Math.max(1, performance.now() - t0);
+    if (!moved) { c.classList.remove('drag'); layoutDeck(); openSheet(c.dataset.code); return; }
+    if (Math.abs(dx) > 100 || v > .7) throwTop(dx > 0 ? 1 : -1); else { c.classList.remove('drag'); layoutDeck(); }
+  };
+  deck.addEventListener('pointerup', end); deck.addEventListener('pointercancel', end);
+  $('dNext').onclick = () => throwTop(-1);
+  $('dPrev').onclick = backOne;
+  $('dOpen').onclick = () => openSheet(DECK[order[0]].code);
+})();
+
+/* ================= editorial index ================= */
+let FILTER = 'all';
+function renderIndex() {
+  const items = DATA.filter(x => FILTER === 'all' || x.cat === FILTER || x.area === FILTER);
+  $('index').innerHTML = items.map((x, i) => {
+    const p = price(x);
+    return `<a class="row rv" data-code="${x.code}" href="../listing/${x.code}.html"><span class="n">${String(i + 1).padStart(2, '0')}</span>
+      <div><div class="t">${esc(x.title)}</div><div class="m">${TYPES[x.cat]} · ${esc(x.area)} · ${size(x)} · <span dir="ltr">${x.code}</span></div></div>
+      <div class="p">${p.main}<small>${x.mode === 'dunam' ? 'للدنم' : 'إجمالي'}</small></div>
+      <div class="thumb">${cover(x, i + 11)}</div></a>`;
+  }).join('');
+  collect();
+}
+function renderChips() {
+  const c = [['all', 'الكل', DATA.length]];
+  for (const k of ['land', 'villa', 'farm', 'apt']) { const n = DATA.filter(x => x.cat === k).length; if (n) c.push([k, TYPES[k], n]); }
+  for (const a of [...new Set(DATA.map(x => x.area))]) c.push([a, a, DATA.filter(x => x.area === a).length]);
+  $('chips').innerHTML = c.map(([k, t, n]) => `<button class="chip${k === FILTER ? ' on' : ''}" data-k="${k}">${t} <em>${n}</em></button>`).join('');
+}
+$('chips').onclick = e => { const b = e.target.closest('.chip'); if (!b) return; FILTER = b.dataset.k; renderChips(); renderIndex(); };
+
+/* ================= quick-view sheet ================= */
+const sheet = $('sheet'), sheetBg = $('sheetBg'), sheetBody = $('sheetBody');
+function openSheet(code, push = true) {
+  const x = DATA.find(d => d.code === code); if (!x) return false;
+  const p = price(x), url = new URL(`../listing/${x.code}.html`, location.href).href;
+  const facts = [['النوع', TYPES[x.cat]], ['المنطقة', x.area], ['المساحة', size(x)], ['رمز العقار', x.code]];
+  if (x.bua && x.area_m2) facts.push(['البناء', `${x.bua} م²`]);
+  if (x.mode === 'dunam') facts.push(['سعر الدنم', money(x.price)], ['الإجمالي', money(x.total)]);
+  if (x.papers) facts.push(['الأوراق', x.papers]);
+  if (x.nego) facts.push(['السعر', 'قابل للتفاوض']);
+  sheetBody.innerHTML = `
+    <div class="sh-cover">${cover(x, DATA.indexOf(x) + 31)}<span class="code">${x.code}</span><span class="tag">${TYPES[x.cat]}</span></div>
+    <div class="sh-t">${esc(x.title)}</div><div class="sh-where">${esc(x.area)} · ريف دمشق</div>
+    <div class="sh-price"><b>${p.main}</b><small>${p.note}</small></div>
+    <div class="facts">${facts.map(([k, v]) => `<div class="fact"><small>${k}</small><b>${esc(v)}</b></div>`).join('')}</div>
+    ${(x.feats || []).length ? `<div class="feats">${x.feats.map(f => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
+    <div class="sh-actions"><a class="wa" href="${WA + encodeURIComponent(`مرحباً أستاذ محمد، أستفسر عن العقار ${x.code} — ${x.title}`)}">استفسر على واتساب</a><a class="more" href="../listing/${x.code}.html">التفاصيل الكاملة</a></div>
+    ${navigator.share ? `<button class="sh-share" id="shShare">مشاركة العقار</button>` : ''}`;
+  const sh = $('shShare'); if (sh) sh.onclick = () => navigator.share({ title: x.title, text: `${x.title} — ${p.main}`, url }).catch(() => {});
+  sheetBody.scrollTop = 0; sheet.style.transform = '';
+  sheet.classList.add('on'); sheetBg.classList.add('on'); document.documentElement.classList.add('lock');
+  if (push) history.pushState({ sheet: code }, '', `#${x.code}`);
+  return true;
+}
+function closeSheet(fromHistory = false) {
+  if (!sheet.classList.contains('on')) return;
+  sheet.classList.remove('on', 'drag'); sheet.style.transform = '';
+  sheetBg.classList.remove('on'); sheetBg.style.opacity = '';
+  document.documentElement.classList.remove('lock');
+  if (!fromHistory && history.state && history.state.sheet) history.back();
+}
+addEventListener('popstate', e => { if (e.state && e.state.sheet) openSheet(e.state.sheet, false); else closeSheet(true); });
+addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+sheetBg.addEventListener('click', () => closeSheet());
+document.addEventListener('click', e => {
+  const a = e.target.closest('.row'); if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+  if (openSheet(a.dataset.code)) e.preventDefault();
+});
+let dY0 = null, dDy = 0, dT = 0, dV = 0, fromHandle = false;
+const dStart = y => { dY0 = y; dDy = 0; dT = performance.now(); dV = 0; };
+function dMove(y) {
+  const dy = y - dY0, now = performance.now(); dV = (dy - dDy) / Math.max(1, now - dT); dT = now; dDy = dy;
+  sheet.classList.add('drag'); sheet.style.transform = `translateY(${dy > 0 ? dy : dy * .2}px)`;
+  sheetBg.style.opacity = String(1 - clamp(dy / (sheet.offsetHeight || 1)) * .9);
+}
+function dEnd() {
+  if (dY0 == null) return; sheet.classList.remove('drag');
+  if (dDy > 110 || dV > .55) closeSheet(); else { sheet.style.transform = ''; sheetBg.style.opacity = ''; }
+  dY0 = null;
+}
+sheet.addEventListener('touchstart', e => { fromHandle = !!e.target.closest('.grab'); dStart(e.touches[0].clientY); }, { passive: true });
+sheet.addEventListener('touchmove', e => {
+  if (dY0 == null) return; const dy = e.touches[0].clientY - dY0;
+  if (fromHandle || (sheetBody.scrollTop <= 0 && dy > 0) || sheet.classList.contains('drag')) { e.preventDefault(); dMove(e.touches[0].clientY); }
+}, { passive: false });
+sheet.addEventListener('touchend', dEnd); sheet.addEventListener('touchcancel', dEnd);
+$('grab').addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'mouse') return; dStart(e.clientY);
+  const mv = ev => dMove(ev.clientY), up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); dEnd(); };
+  addEventListener('pointermove', mv); addEventListener('pointerup', up);
+});
+
+/* ================= spotlight ================= */
+const spot = $('spot');
+addEventListener('pointermove', e => { spot.style.setProperty('--sx', e.clientX + 'px'); spot.style.setProperty('--sy', e.clientY + 'px'); spot.style.setProperty('--so', 1); });
+addEventListener('pointerdown', e => { spot.style.setProperty('--sx', e.clientX + 'px'); spot.style.setProperty('--sy', e.clientY + 'px'); spot.style.setProperty('--so', 1); });
+addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') setTimeout(() => spot.style.setProperty('--so', 0), 300); });
+
+/* ================= one loop for everything ================= */
+let REVEAL = [], COUNTS = [], ROWSEL = [];
+function collect() { REVEAL = [...document.querySelectorAll('.rv')]; COUNTS = [...document.querySelectorAll('[data-count]')]; ROWSEL = [...document.querySelectorAll('.row')]; }
+collect();
+let lastY = scrollY, VEL = 0, lastT = performance.now();
+function frame(now) {
+  const dt = Math.min(50, now - lastT) / 16.67; lastT = now;
+  const y = scrollY, vh = innerHeight, dv = y - lastY; lastY = y;
+  VEL += (dv - VEL) * .15;
+  document.documentElement.style.setProperty('--navbg', clamp(y / (vh * .4)).toFixed(3));
+  document.documentElement.style.setProperty('--dock', clamp((y - vh * .7) / (vh * .3)).toFixed(3));
+  tiltX += (tiltTarget - tiltX) * .05;
+  heroVisible = y < vh * 1.05;
+  if (heroVisible && !reduce) drawTerrain(now);
+  if (!reduce) {
+    $('hcopy').style.transform = `translateY(${y * .4}px)`; $('hcopy').style.opacity = 1 - clamp(y / (vh * .7));
+    const sp = 1.2 + Math.abs(VEL) * .9, dir = VEL < -.2 ? -1 : 1;
+    const w1 = $('m1').scrollWidth / 3, w2 = $('m2').scrollWidth / 3;
+    m1x = (m1x - sp * dir * dt + w1) % w1; m2x = (m2x + sp * dir * dt * .8 + w2) % w2;
+    $('m1').style.transform = `translateX(${-m1x}px)`; $('m2').style.transform = `translateX(${-w2 + m2x}px)`;
+    for (const el of REVEAL) {
+      const r = el.getBoundingClientRect(); if (r.top > vh * 1.2 || r.bottom < -vh * .2) continue;
+      const p = eo(clamp((vh * .96 - r.top) / (vh * .26)));
+      el.style.opacity = p; el.style.transform = `translateY(${(1 - p) * 40}px)`;
+    }
+    for (const el of ROWSEL) {
+      const r = el.getBoundingClientRect(); if (r.top > vh * 1.2 || r.bottom < -40) continue;
+      el.style.setProperty('--lx', eo(clamp((vh * .98 - r.top) / (vh * .4))).toFixed(3));
+    }
+    const rv = $('reveal').getBoundingClientRect();
+    $('circle').style.setProperty('--cr', `${6 + eo(clamp(-rv.top / (rv.height - vh * 1.05))) * 90}%`);
+  } else {
+    for (const el of ROWSEL) el.style.setProperty('--lx', 1);
+    $('circle').style.setProperty('--cr', '100%');
+  }
+  for (const el of COUNTS) {
+    const r = el.getBoundingClientRect();
+    el.textContent = Math.round(+el.dataset.count * eo(clamp((vh * .95 - r.top) / (vh * .3))));
+  }
+  requestAnimationFrame(frame);
+}
+addEventListener('resize', resize);
+
+fetch('../data.json', { cache: 'no-cache' }).then(r => r.json()).then(d => {
+  DATA = d.filter(x => x && x.code);
+  $('stCount').dataset.count = DATA.length;
+  $('stAreas').dataset.count = new Set(DATA.map(x => x.area)).size;
+  $('stMax').dataset.count = Math.round(Math.max(...DATA.map(x => x.area_m2 || 0)) / 1000);
+  for (const a of document.querySelectorAll('[data-wa]')) a.href = WA + encodeURIComponent('مرحباً أستاذ محمد، وصلتك من الموقع');
+  renderDeck(); renderChips(); renderIndex();
+  if (/^#MK-\d+$/.test(location.hash)) { history.replaceState(null, '', location.pathname); openSheet(location.hash.slice(1)); }
+  window.READY = true;
+}).catch(() => { $('index').innerHTML = '<p class="lead">تعذّر تحميل العقارات. <a class="gtext" href="../index.html">افتح الصفحة الرئيسية</a></p>'; window.READY = true; });
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
