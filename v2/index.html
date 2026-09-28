@@ -38,7 +38,7 @@ a{color:inherit;text-decoration:none}
 .pill.ghost{border:1px solid rgba(216,178,90,.45);color:var(--gold2)}
 
 /* hero */
-.hero{position:relative;height:100svh;min-height:640px;overflow:hidden}
+.hero{position:relative;height:100svh;min-height:640px;overflow:hidden;touch-action:pan-y}
 .layer{position:absolute;left:0;right:0}
 .sky{inset:0;background:radial-gradient(120% 70% at 70% 0%,rgba(216,178,90,.22),transparent 60%),radial-gradient(80% 50% at 10% 30%,rgba(216,178,90,.08),transparent 70%),linear-gradient(#0e0d0b,#0b0b0c)}
 .contours{inset:-10% -20% auto -20%;height:120%;opacity:.35}
@@ -73,11 +73,19 @@ a{color:inherit;text-decoration:none}
 .sub{color:var(--mute);font-size:15px;margin-top:10px;line-height:1.7}
 
 /* featured pinned horizontal */
-.pin{position:relative;height:320vh}
-.pin-inner{position:sticky;top:0;height:100svh;overflow:hidden;display:flex;flex-direction:column;justify-content:center}
-.pin-head{padding:0 var(--pad);margin-bottom:22px;max-width:1180px;width:100%;margin-inline:auto}
-.track{display:flex;gap:16px;padding:0 var(--pad);width:max-content}
-.fcard{width:min(78vw,380px);flex:none;border-radius:28px;overflow:hidden;background:var(--card);border:1px solid var(--line);position:relative}
+.car{overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;padding:26px 0 30px}
+.car::-webkit-scrollbar{display:none}
+.track{display:flex;gap:14px;width:max-content;padding:0 calc((100vw - min(72vw,360px)) / 2)}
+.fin{position:relative;border-radius:28px;overflow:hidden;background:var(--card);border:1px solid var(--line);transform:perspective(900px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) scale(var(--ps,1));transition:transform .55s cubic-bezier(.2,.8,.2,1);box-shadow:0 30px 60px rgba(0,0,0,.35)}
+.fin.live{transition:transform .08s linear}
+.glare{position:absolute;inset:0;z-index:3;pointer-events:none;background:radial-gradient(circle at var(--gx,50%) var(--gy,0%),rgba(255,232,170,.22),transparent 55%);opacity:var(--go,0);transition:opacity .4s}
+.dots{display:flex;justify-content:center;gap:6px}
+.dots i{width:6px;height:6px;border-radius:3px;background:rgba(255,255,255,.15);transition:width .35s,background .35s}
+.dots i.on{width:24px;background:var(--gold)}
+.swipe{display:inline-flex;align-items:center;gap:8px;color:var(--mute);font-size:13px;margin-top:10px}
+.swipe svg{animation:nudge 1.8s ease-in-out infinite}
+@keyframes nudge{0%,100%{transform:translateX(0)}50%{transform:translateX(-8px)}}
+.fcard{width:min(72vw,360px);flex:none;display:block;scroll-snap-align:center;scroll-snap-stop:always;-webkit-tap-highlight-color:transparent}
 .fcard .cover{height:min(58vw,300px)}
 .fcard .body{padding:18px 20px 20px}
 .fcard .t{font-size:22px;font-weight:800;line-height:1.35}
@@ -87,8 +95,6 @@ a{color:inherit;text-decoration:none}
 .fcard .price small{color:var(--mute);font-size:12px}
 .code{position:absolute;top:14px;left:14px;z-index:2;font:700 12px/1 'Tajawal';letter-spacing:.5px;padding:7px 11px;border-radius:99px;background:rgba(11,11,12,.7);border:1px solid rgba(216,178,90,.4);color:var(--gold2);direction:ltr}
 .tag{position:absolute;top:14px;right:14px;z-index:2;font-size:12px;font-weight:700;padding:6px 12px;border-radius:99px;background:linear-gradient(135deg,var(--gold2),var(--gold));color:#1a1407}
-.progress{height:3px;background:var(--line);border-radius:3px;margin:26px var(--pad) 0;max-width:1140px;overflow:hidden}
-.progress i{display:block;height:100%;background:linear-gradient(90deg,var(--gold3),var(--gold2));transform-origin:right;transform:scaleX(0)}
 
 /* covers */
 .cover{position:relative;overflow:hidden;background:radial-gradient(90% 90% at 70% 10%,rgba(216,178,90,.20),transparent 60%),linear-gradient(160deg,#1d1a14,#101012)}
@@ -105,7 +111,8 @@ a{color:inherit;text-decoration:none}
 .list{display:grid;gap:12px;padding:6px var(--pad) 0}
 @media(min-width:760px){.list{grid-template-columns:1fr 1fr}}
 @media(min-width:1100px){.list{grid-template-columns:1fr 1fr 1fr}}
-.lcard{display:grid;grid-template-columns:118px 1fr;gap:14px;align-items:center;padding:10px;border-radius:22px;background:var(--card);border:1px solid var(--line)}
+@property --press{syntax:"<number>";inherits:false;initial-value:1}
+.lcard{transition:--press .22s;-webkit-tap-highlight-color:transparent;cursor:pointer;display:grid;grid-template-columns:118px 1fr;gap:14px;align-items:center;padding:10px;border-radius:22px;background:var(--card);border:1px solid var(--line)}
 .lcard .cover{height:118px;border-radius:16px}
 .lcard .t{font-size:17px;font-weight:800;line-height:1.4}
 .lcard .meta{color:var(--mute);font-size:12.5px;margin-top:4px}
@@ -135,6 +142,36 @@ footer{padding:40px var(--pad) 120px;color:var(--mute);font-size:13px;line-heigh
 .dock .call{background:rgba(23,23,26,.9);border:1px solid var(--line);backdrop-filter:blur(10px)}
 @media(min-width:900px){.dock{display:none}}
 
+.lcard:active{--press:.965}
+/* quick-view bottom sheet */
+.sheet-bg{position:fixed;inset:0;z-index:80;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);opacity:0;pointer-events:none;transition:opacity .35s}
+.sheet-bg.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:90;max-height:92svh;display:flex;flex-direction:column;background:#141416;border:1px solid rgba(216,178,90,.3);border-bottom:0;border-radius:28px 28px 0 0;transform:translateY(105%);transition:transform .5s cubic-bezier(.2,.9,.2,1);box-shadow:0 -30px 80px rgba(0,0,0,.6);visibility:hidden}
+.sheet.on{transform:translateY(0);visibility:visible}
+.sheet.drag{transition:none}
+.grab{flex:none;padding:12px 0 10px;display:flex;justify-content:center;touch-action:none;cursor:grab}
+.grab i{width:46px;height:5px;border-radius:3px;background:rgba(255,255,255,.28)}
+.sheet-body{overflow-y:auto;overscroll-behavior:contain;padding:0 20px calc(24px + env(safe-area-inset-bottom))}
+.sh-cover{height:210px;border-radius:20px;overflow:hidden;position:relative;margin-bottom:16px}
+.sh-cover .cover{height:100%}
+.sh-t{font-size:25px;font-weight:800;line-height:1.35}
+.sh-where{color:var(--mute);font-size:14px;margin-top:4px}
+.sh-price{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:14px 0 6px}
+.sh-price b{font-size:32px;color:var(--gold2)}
+.sh-price small{color:var(--mute);font-size:13px}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0}
+.fact{background:var(--bg2);border:1px solid var(--line);border-radius:16px;padding:12px 14px}
+.fact small{display:block;color:var(--mute);font-size:12px;margin-bottom:2px}
+.fact b{font-size:16px}
+.feats{display:flex;flex-wrap:wrap;gap:6px}
+.feats span{font-size:13px;padding:6px 12px;border-radius:99px;border:1px solid rgba(216,178,90,.35);color:var(--gold2)}
+.sh-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+.sh-actions .btn{height:54px;font-size:14.5px;padding:0 10px;white-space:nowrap}
+.sh-actions .wa{background:#25d366;color:#062b12}
+.sh-share{margin-top:10px;width:100%}
+html.lock{overflow:hidden}
+html.lock .dock{transform:translateY(140%)!important}
+@media(min-width:760px){.sheet{left:50%;right:auto;width:560px;margin-left:-280px}}
 @media (prefers-reduced-motion: reduce){ .mv{transform:none!important;opacity:1!important} }
 </style>
 </head>
@@ -172,15 +209,14 @@ footer{padding:40px var(--pad) 120px;color:var(--mute);font-size:13px;line-heigh
   </div>
 </section>
 
-<section class="pin" id="pin">
-  <div class="pin-inner">
-    <div class="pin-head">
-      <div class="kicker mv" data-r>مختارات</div>
-      <h2 class="h2 serif mv" data-r>عقارات <span class="gtext">مميزة</span></h2>
-    </div>
-    <div class="track mv" id="track"></div>
-    <div class="progress"><i id="prog"></i></div>
+<section class="sec" id="feat">
+  <div class="wrap">
+    <div class="kicker mv" data-r>مختارات</div>
+    <h2 class="h2 serif mv" data-r>عقارات <span class="gtext">مميزة</span></h2>
+    <div class="swipe mv" data-r><svg width="22" height="12" viewBox="0 0 22 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 6H2M7 1 2 6l5 5"/></svg>اسحب بإصبعك</div>
   </div>
+  <div class="car" id="car"><div class="track" id="track"></div></div>
+  <div class="dots" id="dots"></div>
 </section>
 
 <section class="sec" id="all">
@@ -220,6 +256,9 @@ footer{padding:40px var(--pad) 120px;color:var(--mute);font-size:13px;line-heigh
   واتساب: <span dir="ltr">0996 606 813</span><br>
   الأسعار والتوفر قابلة للتغيير. الأوراق تُعرض كاملة قبل أي عربون.
 </footer>
+
+<div class="sheet-bg" id="sheetBg"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="تفاصيل العقار"><div class="grab" id="grab"><i></i></div><div class="sheet-body" id="sheetBody"></div></div>
 
 <nav class="dock" id="dock">
   <a class="wa" href="https://wa.me/963996606813" data-wa><svg width="22" height="22" viewBox="0 0 32 32"><path fill="currentColor" d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3zm5.8 15.7c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1a8.7 8.7 0 0 1-4.3-3.8c-.3-.6.3-.5.9-1.7a.6.6 0 0 0 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4 3.6 3.6 0 0 0-1.1 2.7 6.3 6.3 0 0 0 1.3 3.3 14.4 14.4 0 0 0 5.5 4.9c2 .9 2.8.9 3.8.8a3.3 3.3 0 0 0 2.1-1.5 2.7 2.7 0 0 0 .2-1.5c-.1-.2-.3-.3-.6-.4z"/></svg>تواصل على واتساب</a>
@@ -263,17 +302,19 @@ function renderFeatured() {
   if (f.length < 4) f = [...DATA].sort((a, b) => (b.total || b.price) - (a.total || a.price)).slice(0, 6);
   document.getElementById('track').innerHTML = f.map((x, i) => {
     const p = price(x);
-    return `<a class="fcard" href="../listing/${x.code}.html"><span class="code">${x.code}</span><span class="tag">${TYPES[x.cat]}</span>${cover(x, i + 1)}
+    return `<a class="fcard" data-code="${x.code}" href="../listing/${x.code}.html"><div class="fin"><span class="glare"></span><span class="code">${x.code}</span><span class="tag">${TYPES[x.cat]}</span>${cover(x, i + 1)}
       <div class="body"><div class="t">${x.title}</div><div class="where">${x.area} · ريف دمشق</div>
-      <div class="price"><b>${p.main}</b><small>${p.note}</small></div></div></a>`;
+      <div class="price"><b>${p.main}</b><small>${p.note}</small></div></div></div></a>`;
   }).join('');
+  $('dots').innerHTML = f.map(() => '<i></i>').join('');
+  coverflow();
 }
 let FILTER = 'all';
 function renderList() {
   const items = DATA.filter(x => FILTER === 'all' || x.cat === FILTER || x.area === FILTER);
   document.getElementById('list').innerHTML = items.map((x, i) => {
     const p = price(x);
-    return `<a class="lcard mv" data-r href="../listing/${x.code}.html">${cover(x, i + 11)}<div><span class="mini">${x.code}</span><div class="t">${x.title}</div>
+    return `<a class="lcard mv" data-r data-code="${x.code}" href="../listing/${x.code}.html">${cover(x, i + 11)}<div><span class="mini">${x.code}</span><div class="t">${x.title}</div>
       <div class="meta">${TYPES[x.cat]} · ${x.area} · ${size(x)}</div><div class="p">${p.main}<small>${x.mode === 'dunam' ? 'للدنم' : ''}</small></div></div></a>`;
   }).join('');
   collect(); update();
@@ -311,11 +352,11 @@ function update() {
 
   // hero: layered parallax + headline scrubbing away
   const hp = clamp(y / vh);
-  $('contours').style.transform = `translateY(${y * .45}px) rotate(${hp * 6}deg) scale(${1 + hp * .15})`;
-  $('h3').style.transform = `translateY(${y * .32}px)`;
-  $('h2').style.transform = `translateY(${y * .18}px)`;
-  $('h1').style.transform = `translateY(${y * .05}px)`;
-  $('heroCopy').style.transform = `translateY(${y * .35}px)`;
+  $('contours').style.transform = `translate(${PX * 26}px, ${y * .45 + PY * 18}px) rotate(${hp * 6 + PX * 2}deg) scale(${1.04 + hp * .15})`;
+  $('h3').style.transform = `translate(${PX * -12}px, ${y * .32 + PY * -6}px)`;
+  $('h2').style.transform = `translate(${PX * -24}px, ${y * .18 + PY * -10}px) scale(1.04)`;
+  $('h1').style.transform = `translate(${PX * -40}px, ${y * .05 + PY * -14}px) scale(1.08)`;
+  $('heroCopy').style.transform = `translate(${PX * 10}px, ${y * .35 + PY * 6}px)`;
   $('l1').style.transform = `translateX(${hp * 60}px)`; $('l1').style.opacity = 1 - hp * 1.3;
   $('l2').style.transform = `translateX(${-hp * 90}px)`; $('l2').style.opacity = 1 - hp * 1.5;
   $('lead').style.opacity = 1 - hp * 2; $('ctas').style.opacity = 1 - hp * 2.4;
@@ -326,32 +367,168 @@ function update() {
     const r = el.getBoundingClientRect();
     const p = eo(clamp((vh * .98 - r.top) / (vh * .28)));
     el.style.opacity = p;
-    el.style.transform = `translateY(${(1 - p) * 46}px) scale(${.96 + .04 * p})`;
+    el.style.transform = `translateY(${(1 - p) * 46}px) scale(calc(${.96 + .04 * p} * var(--press, 1)))`;
   }
   // counters follow the scroll too
   for (const el of COUNTS) {
     const r = el.getBoundingClientRect();
     el.textContent = Math.round(+el.dataset.count * eo(clamp((vh * .95 - r.top) / (vh * .35))));
   }
-  // pinned section: vertical scroll drives the cards sideways
-  const pin = $('pin').getBoundingClientRect(), track = $('track');
-  const pp = clamp(-pin.top / (pin.height - vh));
-  const dist = Math.max(0, track.scrollWidth - vw + 40);
-  track.style.transform = `translateX(${pp * dist}px)`;
-  $('prog').style.transform = `scaleX(${pp})`;
-  [...track.children].forEach((c, i) => {
-    const cr = c.getBoundingClientRect(), mid = (cr.left + cr.width / 2) / vw - .5;
-    c.style.transform = `perspective(900px) rotateY(${clamp(mid, -.6, .6) * -10}deg) scale(${1 - Math.min(.5, Math.abs(mid)) * .1})`;
-    c.style.opacity = 1 - Math.min(.45, Math.abs(mid) * .5);
-  });
+  // the list leans with scroll speed, like a physical sheet
+  $('list').style.transform = `skewY(${clamp(VEL * .06, -4, 4)}deg)`;
   // process rail draws itself
   const st = $('steps').getBoundingClientRect();
   $('rail').style.transform = `scaleY(${clamp((vh * .7 - st.top) / st.height)})`;
 }
-let ticking = false;
-addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(() => { ticking = false; update(); }); } }, { passive: true });
-addEventListener('resize', update);
+
+/* ---------- one animation loop: scroll, scroll speed, finger and phone tilt ---------- */
+let PX = 0, PY = 0, TX = 0, TY = 0, VEL = 0, lastY = scrollY, dirty = true;
+function loop() {
+  const y = scrollY, dv = y - lastY; lastY = y;
+  VEL += (dv - VEL) * .18;
+  PX += (TX - PX) * .08; PY += (TY - PY) * .08;
+  if (dirty || dv || Math.abs(VEL) > .05 || Math.abs(TX - PX) > .001 || Math.abs(TY - PY) > .001) { dirty = false; update(); }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+addEventListener('resize', () => { dirty = true; coverflow(); });
 window.update = update;
+
+// finger (or mouse) over the hero moves the landscape
+const hero = $('hero');
+let touchingHero = false;
+hero.addEventListener('pointermove', e => {
+  if (e.pointerType !== 'mouse') touchingHero = true;
+  const r = hero.getBoundingClientRect();
+  TX = clamp((e.clientX - r.left) / r.width * 2 - 1, -1, 1);
+  TY = clamp((e.clientY - r.top) / r.height * 2 - 1, -1, 1);
+});
+const heroRelease = () => { touchingHero = false; TX = 0; TY = 0; };
+hero.addEventListener('pointerleave', heroRelease);
+hero.addEventListener('pointerup', heroRelease);
+hero.addEventListener('pointercancel', heroRelease);
+// phone tilt (Android fires this without a permission prompt)
+addEventListener('deviceorientation', e => {
+  if (touchingHero || e.gamma == null || scrollY > innerHeight) return;
+  TX = clamp(e.gamma / 25, -1, 1); TY = clamp((e.beta - 45) / 25, -1, 1);
+});
+
+/* ---------- featured carousel: native finger swipe + 3D coverflow ---------- */
+const car = $('car');
+function coverflow() {
+  const cr = car.getBoundingClientRect(), mid = cr.left + cr.width / 2;
+  let best = 0, bestD = 1e9;
+  [...$('track').children].forEach((c, i) => {
+    const r = c.getBoundingClientRect(), d = (r.left + r.width / 2 - mid) / r.width;
+    if (Math.abs(d) < bestD) { bestD = Math.abs(d); best = i; }
+    if (reduce) return;
+    const k = clamp(d, -1.6, 1.6);
+    c.style.transform = `perspective(1100px) rotateY(${k * 22}deg) scale(${1 - Math.min(1, Math.abs(k)) * .12})`;
+    c.style.opacity = 1 - Math.min(.55, Math.abs(k) * .45);
+    c.style.zIndex = 10 - Math.round(Math.abs(k) * 3);
+  });
+  [...$('dots').children].forEach((dot, i) => dot.classList.toggle('on', i === best));
+}
+car.addEventListener('scroll', () => requestAnimationFrame(coverflow), { passive: true });
+
+// cards lean toward the finger, with a moving glare
+function tilt(e) {
+  const fin = e.target.closest('.fin'); if (!fin) return;
+  const r = fin.getBoundingClientRect(), x = (e.clientX - r.left) / r.width, y = (e.clientY - r.top) / r.height;
+  fin.classList.add('live');
+  fin.style.setProperty('--ry', `${(x - .5) * 16}deg`); fin.style.setProperty('--rx', `${(.5 - y) * 14}deg`);
+  fin.style.setProperty('--gx', `${x * 100}%`); fin.style.setProperty('--gy', `${y * 100}%`);
+  fin.style.setProperty('--go', 1); fin.style.setProperty('--ps', e.pointerType === 'mouse' ? 1.02 : .97);
+}
+function untilt(e) {
+  const fin = e.target.closest && e.target.closest('.fin'); if (!fin) return;
+  fin.classList.remove('live');
+  for (const k of ['--ry', '--rx', '--go', '--ps']) fin.style.removeProperty(k);
+}
+car.addEventListener('pointerdown', tilt);
+car.addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || e.buttons) tilt(e); });
+for (const ev of ['pointerup', 'pointerleave', 'pointercancel', 'pointerout']) car.addEventListener(ev, untilt);
+
+/* ---------- quick view: bottom sheet you can drag down with your finger ---------- */
+const sheet = $('sheet'), sheetBg = $('sheetBg'), sheetBody = $('sheetBody');
+const esc = t => String(t ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+function openSheet(code, push = true) {
+  const x = DATA.find(d => d.code === code); if (!x) return false;
+  const p = price(x), url = new URL(`../listing/${x.code}.html`, location.href).href;
+  const facts = [['النوع', TYPES[x.cat]], ['المنطقة', `${x.area}`], ['المساحة', size(x)], ['رمز العقار', x.code]];
+  if (x.bua && x.area_m2) facts.push(['البناء', `${x.bua} م²`]);
+  if (x.mode === 'dunam') facts.push(['سعر الدنم', money(x.price)], ['الإجمالي', money(x.total)]);
+  if (x.papers) facts.push(['الأوراق', x.papers]);
+  if (x.nego) facts.push(['السعر', 'قابل للتفاوض']);
+  const wa = 'https://wa.me/963996606813?text=' + encodeURIComponent(`مرحباً أستاذ محمد، أستفسر عن العقار ${x.code} — ${x.title}`);
+  sheetBody.innerHTML = `
+    <div class="sh-cover">${cover(x, DATA.indexOf(x) + 31)}<span class="code">${x.code}</span><span class="tag">${TYPES[x.cat]}</span></div>
+    <div class="sh-t">${esc(x.title)}</div><div class="sh-where">${esc(x.area)} · ريف دمشق</div>
+    <div class="sh-price"><b>${p.main}</b><small>${p.note}</small></div>
+    <div class="facts">${facts.map(([k, v]) => `<div class="fact"><small>${k}</small><b>${esc(v)}</b></div>`).join('')}</div>
+    ${(x.feats || []).length ? `<div class="feats">${x.feats.map(f => `<span>${esc(f)}</span>`).join('')}</div>` : ''}
+    ${x.note ? `<p class="sub">${esc(x.note)}</p>` : ''}
+    <div class="sh-actions"><a class="btn wa" href="${wa}">استفسر على واتساب</a><a class="btn ghost" href="../listing/${x.code}.html">التفاصيل الكاملة</a></div>
+    ${navigator.share ? `<button class="btn ghost sh-share" id="shShare">مشاركة العقار</button>` : ''}`;
+  const sh = $('shShare');
+  if (sh) sh.onclick = () => navigator.share({ title: x.title, text: `${x.title} — ${p.main}`, url }).catch(() => {});
+  sheetBody.scrollTop = 0;
+  sheet.style.transform = '';
+  sheet.classList.add('on'); sheetBg.classList.add('on'); document.documentElement.classList.add('lock');
+  if (push) history.pushState({ sheet: code }, '', `#${x.code}`);
+  return true;
+}
+function closeSheet(fromHistory = false) {
+  if (!sheet.classList.contains('on')) return;
+  sheet.classList.remove('on', 'drag'); sheet.style.transform = '';
+  sheetBg.classList.remove('on'); sheetBg.style.opacity = '';
+  document.documentElement.classList.remove('lock');
+  if (!fromHistory && history.state && history.state.sheet) history.back();
+}
+addEventListener('popstate', e => { if (e.state && e.state.sheet) openSheet(e.state.sheet, false); else closeSheet(true); });
+addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
+sheetBg.addEventListener('click', () => closeSheet());
+document.addEventListener('click', e => {
+  const a = e.target.closest('.lcard, .fcard');
+  if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
+  if (openSheet(a.dataset.code)) e.preventDefault();
+});
+document.addEventListener('touchstart', () => {}, { passive: true }); // enables :active on iOS
+
+// drag to dismiss: from the handle, or from the content when it is scrolled to the top
+let dragY0 = null, dragDy = 0, dragT = 0, dragV = 0;
+function dragStart(y) { dragY0 = y; dragDy = 0; dragT = performance.now(); dragV = 0; }
+function dragMove(y) {
+  const dy = y - dragY0, now = performance.now();
+  dragV = (dy - dragDy) / Math.max(1, now - dragT); dragT = now; dragDy = dy;
+  const shown = dy > 0 ? dy : dy * .2;
+  sheet.classList.add('drag');
+  sheet.style.transform = `translateY(${shown}px)`;
+  sheetBg.style.opacity = String(1 - clamp(dy / (sheet.offsetHeight || 1)) * .9);
+}
+function dragEnd() {
+  if (dragY0 == null) return;
+  sheet.classList.remove('drag');
+  if (dragDy > 110 || dragV > .55) closeSheet();
+  else { sheet.style.transform = ''; sheetBg.style.opacity = ''; }
+  dragY0 = null;
+}
+let fromHandle = false;
+sheet.addEventListener('touchstart', e => { fromHandle = !!e.target.closest('.grab'); dragStart(e.touches[0].clientY); }, { passive: true });
+sheet.addEventListener('touchmove', e => {
+  if (dragY0 == null) return;
+  const dy = e.touches[0].clientY - dragY0;
+  if (fromHandle || (sheetBody.scrollTop <= 0 && dy > 0) || sheet.classList.contains('drag')) { e.preventDefault(); dragMove(e.touches[0].clientY); }
+}, { passive: false });
+sheet.addEventListener('touchend', dragEnd);
+sheet.addEventListener('touchcancel', dragEnd);
+// mouse drag on the handle (desktop)
+$('grab').addEventListener('pointerdown', e => {
+  if (e.pointerType !== 'mouse') return;
+  dragStart(e.clientY);
+  const mv = ev => dragMove(ev.clientY), up = () => { removeEventListener('pointermove', mv); removeEventListener('pointerup', up); dragEnd(); };
+  addEventListener('pointermove', mv); addEventListener('pointerup', up);
+});
 
 fetch('../data.json', { cache: 'no-cache' }).then(r => r.json()).then(d => {
   DATA = d.filter(x => x && x.code);
@@ -360,6 +537,7 @@ fetch('../data.json', { cache: 'no-cache' }).then(r => r.json()).then(d => {
   $('stMax').dataset.count = Math.round(Math.max(...DATA.map(x => x.area_m2 || 0)) / 1000);
   for (const a of document.querySelectorAll('[data-wa]')) a.href = 'https://wa.me/963996606813?text=' + encodeURIComponent('مرحباً أستاذ محمد، وصلتك من الموقع');
   renderFeatured(); renderChips(); renderList(); collect(); update();
+  if (/^#MK-\d+$/.test(location.hash)) { history.replaceState(null, '', location.pathname); openSheet(location.hash.slice(1)); }
   window.READY = true;
 }).catch(() => {
   document.getElementById('list').innerHTML = '<p class="sub" style="padding:20px">تعذّر تحميل العقارات. <a class="gold" href="../index.html">افتح الصفحة الرئيسية</a></p>';
