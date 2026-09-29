@@ -54,6 +54,50 @@ function b64(bytes) {
   return btoa(s);
 }
 const b64text = t => b64(new TextEncoder().encode(t));
+const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+const b64url = bytes => b64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64url = s => unb64(s.replace(/-/g, "+").replace(/_/g, "/"));
+
+/* ===== حماية الصور =====
+   الصور تعيش في المستودع الخاص فقط. صفحة المعرض في الموقع العام تحمل صوراً مشفّرة (AES-GCM)
+   ومفتاح الفك في الرابط بعد # — لا يصل لأي خادم ولا يُخزَّن في أي مستودع. */
+async function photoBytes(path) {
+  if (newBlobs[path]) return unb64(newBlobs[path]);
+  const b = await ghRaw(CFG.priv, path);
+  if (b) return b;
+  /* صور قديمة لم تُرحَّل بعد: ما زالت في الموقع العام */
+  try { const r = await fetch(BASE + "/" + path, { cache: "no-store" }); if (r.ok) return new Uint8Array(await r.arrayBuffer()); } catch (e) { }
+  return null;
+}
+const photoUrls = new Map();
+function loadPhoto(path) {
+  if (newBlobs[path]) return Promise.resolve("data:image/jpeg;base64," + newBlobs[path]);
+  if (!photoUrls.has(path)) photoUrls.set(path, photoBytes(path).then(b => {
+    if (!b) { photoUrls.delete(path); return null; }
+    return URL.createObjectURL(new Blob([b], { type: "image/jpeg" }));
+  }));
+  return photoUrls.get(path);
+}
+function setPhoto(img, path) {
+  img.removeAttribute("src");
+  loadPhoto(path).then(u => { if (u) img.src = u; });
+}
+function newSecret() { const b = new Uint8Array(16); crypto.getRandomValues(b); return b64url(b); }
+/** صور -> ملف واحد: [عدد][طول+IV+مشفّر]… */
+async function encryptPhotos(secret, list) {
+  const key = await crypto.subtle.importKey("raw", unb64url(secret), "AES-GCM", false, ["encrypt"]);
+  const parts = [], head = new Uint8Array(4);
+  new DataView(head.buffer).setUint32(0, list.length); parts.push(head);
+  for (const bytes of list) {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv }, key, bytes));
+    const l = new Uint8Array(4); new DataView(l.buffer).setUint32(0, 12 + ct.length);
+    parts.push(l, iv, ct);
+  }
+  const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0)); let o = 0;
+  for (const p of parts) { out.set(p, o); o += p.length; }
+  return out;
+}
 
 /* ===== GitHub ===== */
 async function gh(path, opts) {
@@ -81,6 +125,16 @@ async function readJson(repo, file) {
   if (!res) return null;
   const txt = new TextDecoder().decode(Uint8Array.from(atob(res.content.replace(/\n/g, "")), c => c.charCodeAt(0)));
   return JSON.parse(txt);
+}
+
+/** ملف خام من مستودع (الصور في المستودع الخاص، تُقرأ بمفتاحك فقط) */
+async function ghRaw(repo, path) {
+  try {
+    const r = await fetch(`https://api.github.com/repos/${CFG.owner}/${repo}/contents/${quote(path)}`, {
+      headers: { Authorization: "Bearer " + CFG.token, Accept: "application/vnd.github.raw+json", "X-GitHub-Api-Version": "2022-11-28" }
+    });
+    return r.ok ? new Uint8Array(await r.arrayBuffer()) : null;
+  } catch (e) { return null; }
 }
 
 /** كل مسارات الملفات الموجودة حالياً في المستودع */
@@ -653,10 +707,11 @@ async function drawPostCard(x) {
   const ph = (x.photos || [])[0];
   let drew = false;
   if (ph) {
-    const im = await new Promise(res => {
+    const phUrl = await loadPhoto(ph);
+    const im = phUrl && await new Promise(res => {
       const i = new Image(); i.crossOrigin = "anonymous";
       i.onload = () => res(i); i.onerror = () => res(null);
-      i.src = newBlobs[ph] ? "data:image/jpeg;base64," + newBlobs[ph] : "/" + ph;
+      i.src = phUrl;
     });
     if (im) {
       ctx.save(); rrect(ctx, px, py, pw, pH, 36); ctx.clip();
@@ -727,8 +782,8 @@ async function openPost(x) {
 
 /* ===================== تمويه أجزاء من الصورة ===================== */
 let blurState = null;
-function openBlur(path) {
-  const src = newBlobs[path] ? "data:image/jpeg;base64," + newBlobs[path] : "/" + path;
+async function openBlur(path) {
+  const src = await loadPhoto(path);
   const img = new Image();
   img.crossOrigin = "anonymous";
   img.onload = function () {
@@ -750,6 +805,7 @@ function openBlur(path) {
     const s = upStat(); s.hidden = false; s.className = "upstat bad";
     s.textContent = "ما قدرت أفتح الصورة للتمويه.";
   };
+  if (!src) { img.onerror(); return; }
   img.src = src;
 }
 function blurAt(ev) {
@@ -782,14 +838,29 @@ function newKey() {
   return Array.from(b, v => a[v % a.length]).join("");
 }
 const galPath = key => `${GAL_DIR}/${key}.html`;
-const galUrl = key => `${BASE}/${galPath(key)}`;
+const binPath = key => `${GAL_DIR}/${key}.bin`;
+const galUrl = (key, secret) => `${BASE}/${galPath(key)}#${secret}`;
+const galReady = r => !!(r.galKey && r.galSecret);
 
 /** صفحة الصور الخاصة — تصميم الموقع نفسه، noindex، بلا روابط للموقع */
-function galleryPage(x) {
+function galleryPage(x, previewUrls) {
   const [n, u] = sizeOf(x), [main, unit2] = priceTxt(x);
-  const imgs = (x.photos || []).map((p, i) =>
-    `<figure class="gshot"><img src="${BASE}/${esc(p)}" alt="${esc(x.title)} — صورة ${i + 1}" loading="lazy"></figure>`
-  ).join("");
+  /* المعاينة من اللوحة: صور جاهزة. الصفحة المنشورة: مشفّرة تُفك عند الفتح بالمفتاح الذي في الرابط */
+  const imgs = previewUrls
+    ? previewUrls.map((u, i) => `<figure class="gshot"><img src="${esc(u)}" alt="${esc(x.title)} — صورة ${i + 1}"></figure>`).join("")
+    : "";
+  const dec = previewUrls ? "" : `<script>
+(async function(){var st=document.getElementById("gst"),box=document.getElementById("gs");
+try{var k=location.hash.slice(1);if(!k)throw 1;
+var key=await crypto.subtle.importKey("raw",Uint8Array.from(atob(k.replace(/-/g,"+").replace(/_/g,"/")),function(c){return c.charCodeAt(0)}),"AES-GCM",false,["decrypt"]);
+var r=await fetch(${JSON.stringify(x.galKey + ".bin")});if(!r.ok)throw 2;
+var d=new Uint8Array(await r.arrayBuffer()),dv=new DataView(d.buffer),n=dv.getUint32(0),o=4;
+for(var i=0;i<n;i++){var len=dv.getUint32(o);o+=4;
+var pt=await crypto.subtle.decrypt({name:"AES-GCM",iv:d.slice(o,o+12)},key,d.slice(o+12,o+len));o+=len;
+var f=document.createElement("figure");f.className="gshot";var im=new Image();im.alt="صورة "+(i+1);
+im.src=URL.createObjectURL(new Blob([pt],{type:"image/jpeg"}));f.appendChild(im);box.appendChild(f)}
+st.hidden=true}catch(e){st.textContent=${JSON.stringify("الرابط ناقص أو غير صالح. اطلب من " + NAME + " إرسال الرابط كاملاً كما هو.")}}})();
+</script>`;
   const waTxt = `مرحباً أستاذ محمد، شفت صور العقار ${x.code} (${x.title}) وبدي أستفسر.`;
   return `<!doctype html>
 <html lang="ar" dir="rtl" class="solid">
@@ -817,10 +888,10 @@ function galleryPage(x) {
       <a class="btn btn-ghost" href="tel:+${PHONE_INTL}" dir="ltr">${PHONE_LOCAL}</a>
     </div>
   </header>
-  <div class="gshots">${imgs || '<p class="gnote">ما في صور بعد لهذا العقار.</p>'}</div>
+  <div class="gshots" id="gs">${imgs || '<p class="gnote" id="gst">جارٍ فتح الصور…</p>'}</div>
   <p class="gnote">هذه الصفحة خاصة — أُرسلت لك من ${NAME}، ${ROLE}.<br>الأوراق تُعرض كاملة قبل أي عربون.</p>
 </div>
-</body></html>`;
+${dec}</body></html>`;
 }
 
 /** نافذة مشاركة الرابط الخاص */
@@ -831,16 +902,16 @@ function openGallery(r) {
   $("galTitle").textContent = "صور " + r.code + " — رابط خاص";
   $("galSub").textContent = r.title + " · " + r.area
     + (has ? ` · ${has} صورة` : " · ما في صور بعد");
-  const key = r.galKey || "";
-  $("galLink").value = key ? galUrl(key) : "";
+  const key = galReady(r) ? r.galKey : "";
+  $("galLink").value = key ? galUrl(key, r.galSecret) : "";
   $("galLink").disabled = !key;
   $("galCopy").disabled = !key;
-  $("galOpen").href = key ? galUrl(key) : "#";
+  $("galOpen").href = key ? galUrl(key, r.galSecret) : "#";
   $("galOpen").hidden = !key;
   $("galWa").hidden = !key;
   if (key) {
     $("galWa").href = "https://wa.me/?text=" + encodeURIComponent(
-      `صور العقار ${r.code} — ${r.title} (${r.area})\n${galUrl(key)}`);
+      `صور العقار ${r.code} — ${r.title} (${r.area})\n${galUrl(key, r.galSecret)}`);
   }
   $("galNew").textContent = key ? "رابط جديد (يُبطل القديم)" : "أنشئ الرابط";
   $("galMsg").hidden = true;
@@ -936,7 +1007,7 @@ function render() {
     if ((r.photos || []).length) {
       const th = document.createElement("div"); th.className = "thumb";
       const im = document.createElement("img");
-      im.src = photoSrc(r.photos[0]); im.alt = r.title || r.code; im.loading = "lazy";
+      setPhoto(im, r.photos[0]); im.alt = r.title || r.code; im.loading = "lazy";
       th.appendChild(im); b.appendChild(th);
     }
     const h = document.createElement("h3"); h.textContent = r.title || "بلا عنوان"; b.appendChild(h);
@@ -953,11 +1024,6 @@ function render() {
     + (held ? " · " + held + " موقوف ما بينشر" : "");
   updateBar();
   saveDraft();
-}
-/* صورة لم تُرفع بعد تُعرض من الذاكرة */
-function photoSrc(path) {
-  if (newBlobs[path]) return "data:image/jpeg;base64," + newBlobs[path];
-  return BASE + "/" + path;
 }
 
 /* ===== الصور ===== */
@@ -977,7 +1043,7 @@ function drawPhotos() {
   photos.forEach((path, i) => {
     const fig = document.createElement("div"); fig.className = "ph";
     const img = document.createElement("img");
-    img.src = photoSrc(path); img.alt = "صورة " + (i + 1); img.loading = "lazy";
+    setPhoto(img, path); img.alt = "صورة " + (i + 1); img.loading = "lazy";
     img.title = "اضغط للمعاينة الكاملة والتمويه";
     img.addEventListener("click", () => openBlur(path));
     fig.appendChild(img);
@@ -1054,7 +1120,7 @@ async function addPhotos(files) {
     }
   }
   syncQuick();
-  stat.textContent = done + " صورة جاهزة — اضغط «نشر» لتظهر على الموقع.";
+  stat.textContent = done + " صورة جاهزة — اضغط «نشر» لتنحفظ بشكل خاص.";
   setTimeout(() => { stat.hidden = true; }, 4500);
 }
 /* في وضع الصور السريع بنكتب على السطر مباشرة */
@@ -1192,11 +1258,28 @@ async function publish() {
   try {
     const live = liveRows();
 
-    /* بياناتك أولاً: هي الأصل. لو انقطع النت بعدها، ما بتضيع ولا معلومة. */
-    say("جارٍ حفظ بياناتك…", "warn", true);
+    /* روابط صور قديمة (بلا مفتاح تشفير) غير آمنة: تُلغى، ويُنشأ رابط جديد مشفّر عند الطلب */
+    for (const r of ROWS) if (r.galKey && !r.galSecret) delete r.galKey;
+
+    /* الصور تُحفظ في المستودع الخاص فقط: الجديد يُرفع، والقديم في الموقع العام يُرحَّل */
+    say("جارٍ حفظ بياناتك وصورك في المستودع الخاص…", "warn", true);
+    const usedPhotos = new Set(ROWS.flatMap(r => r.photos || []));
+    const privPaths = new Set(await repoPaths(CFG.priv));
+    const privFiles = [];
+    const unsafe = new Set();      /* صور تعذّر ترحيلها: لا نحذف نسختها العامة */
+    for (const p of usedPhotos) {
+      if (newBlobs[p]) privFiles.push({ path: p, b64: newBlobs[p] });
+      else if (!privPaths.has(p)) {
+        const bytes = await photoBytes(p);
+        if (bytes) privFiles.push({ path: p, b64: b64(bytes) });
+        else unsafe.add(p);
+      }
+    }
+    const privDeletes = [...privPaths].filter(p => p.startsWith("img/") && !usedPhotos.has(p));
     const clean = ROWS.map(r => { const c = Object.assign({}, r); delete c._new; return c; });
-    await commit(CFG.priv, [{ path: "private.json", content: JSON.stringify(clean, null, 1) }],
-      "تحديث بيانات المخزون");
+    /* بياناتك أولاً: هي الأصل. لو انقطع النت بعدها، ما بتضيع ولا معلومة. */
+    await commit(CFG.priv, [{ path: "private.json", content: JSON.stringify(clean, null, 1) }].concat(privFiles),
+      "تحديث بيانات المخزون", privDeletes);
 
     say("جارٍ تجهيز صفحات الموقع…", "warn", true);
     const cols = collectionsAll(live);
@@ -1207,20 +1290,29 @@ async function publish() {
     ];
     for (const c of cols) files.push({ path: c.slug, content: collectionPage(c, cols) });
     for (const x of live) files.push({ path: `listing/${x.code}.html`, content: listingPage(x, live) });
-    for (const p in newBlobs) files.push({ path: p, b64: newBlobs[p] });
-    /* صفحات الصور الخاصة: لكل عقار له مفتاح وصور */
+
+    const existing = await repoPaths(CFG.pub);
+    const pubHas = new Set(existing);
+    /* صفحات الصور الخاصة: صفحة عامة بلا صور + ملف صور مشفّر لا يُفتح بدون المفتاح */
     const galKeep = new Set();
     for (const r of ROWS) {
-      if (r.galKey && (r.photos || []).length) {
-        files.push({ path: galPath(r.galKey), content: galleryPage(r) });
-        galKeep.add(galPath(r.galKey));
-      }
+      if (!galReady(r) || !(r.photos || []).length) continue;
+      files.push({ path: galPath(r.galKey), content: galleryPage(r) });
+      galKeep.add(galPath(r.galKey)); galKeep.add(binPath(r.galKey));
+      const base = JSON.parse(BASE_ROWS).find(b => b.code === r.code);
+      const changed = !pubHas.has(binPath(r.galKey)) || !base || base.galKey !== r.galKey
+        || base.galSecret !== r.galSecret || JSON.stringify(base.photos) !== JSON.stringify(r.photos)
+        || r.photos.some(p => newBlobs[p]);
+      if (!changed) continue;
+      say("جارٍ تشفير صور " + r.code + "…", "warn", true);
+      const list = [];
+      for (const p of r.photos) { const bytes = await photoBytes(p); if (bytes) list.push(bytes); }
+      files.push({ path: binPath(r.galKey), b64: b64(await encryptPhotos(r.galSecret, list)) });
     }
 
     /* صفحات عقارات ما عادت متاحة (انحذفت أو صارت موقوفة) تُشال من الموقع
        حتى ما يوصلها زبون من جوجل ويتصل على عقار مباع */
     const keep = new Set(live.map(x => `listing/${x.code}.html`));
-    const usedPhotos = new Set(ROWS.flatMap(r => r.photos || []));
     /* كل أسماء صفحات التصفّح الممكنة — نحذف ما لم يعد منها مستحقّاً */
     const colNames = new Set();
     for (const a of AREA_ORDER) {
@@ -1228,24 +1320,24 @@ async function publish() {
       for (const c of ["land", "villa", "farm", "apt"]) colNames.add(`${CAT_SLUG[c]}-${AREA_SLUG[a]}.html`);
     }
     const colKeep = new Set(cols.map(c => c.slug));
-    const existing = await repoPaths(CFG.pub);
     const deletes = existing.filter(p =>
       (p.startsWith("listing/") && p.endsWith(".html") && !keep.has(p)) ||
       (colNames.has(p) && !colKeep.has(p)) ||
       /* رابط خاص أُبطل أو عقار ما عاد له صور */
-      (p.startsWith(GAL_DIR + "/") && p.endsWith(".html") && !galKeep.has(p)) ||
-      /* صورة ما عاد يشير إليها أي عقار */
-      (p.startsWith("img/") && p !== "img/mohammad-khaled.jpg" && !usedPhotos.has(p)));
+      (p.startsWith(GAL_DIR + "/") && /\.(html|bin)$/.test(p) && !galKeep.has(p)) ||
+      /* كل صور العقارات تغادر المستودع العام (ما عدا صورتك الشخصية) */
+      (p.startsWith("img/") && p !== "img/mohammad-khaled.jpg" && !unsafe.has(p)));
 
     say("جارٍ الرفع (" + files.length + " ملف"
       + (deletes.length ? " · حذف " + deletes.length : "") + ")…", "warn", true);
     await commit(CFG.pub, files, "تحديث المخزون من لوحة الإدارة", deletes);
 
+    for (const p in newBlobs) photoUrls.delete(p);
     newBlobs = {};
     ROWS.forEach(r => { delete r._new; });
     BASE_ROWS = snapshot();
     try { localStorage.removeItem(LS_DRAFT); } catch (e) { }
-    say("اننشر ✓ الموقع بيتحدّث خلال دقيقة", "ok");
+    say("اننشر ✓ الموقع بيتحدّث خلال دقيقة" + (unsafe.size ? " (تعذّر ترحيل " + unsafe.size + " صورة)" : ""), unsafe.size ? "warn" : "ok");
     setTimeout(() => { say("", ""); updateBar(); }, 6000);
     render();
   } catch (e) {
@@ -1308,23 +1400,28 @@ $("galCopy").addEventListener("click", async () => {
 });
 /* معاينة: الصفحة تُنشأ على الموقع عند «نشر» فقط، فقبل النشر نعرضها من اللوحة نفسها */
 $("galOpen").addEventListener("click", ev => {
-  if (!galRow || !galRow.galKey) return;
+  if (!galRow || !galReady(galRow)) return;
   const base = JSON.parse(BASE_ROWS).find(b => b.code === galRow.code);
-  const live = base && base.galKey === galRow.galKey && (base.photos || []).length
-    && JSON.stringify(base.photos) === JSON.stringify(galRow.photos || []);
+  const live = base && base.galKey === galRow.galKey && base.galSecret === galRow.galSecret
+    && (base.photos || []).length && JSON.stringify(base.photos) === JSON.stringify(galRow.photos || []);
   if (live) return;                       /* منشورة فعلاً: يفتح الرابط الحقيقي */
   ev.preventDefault();
   const m = $("galMsg"); m.hidden = false; m.className = "upstat";
   if (!(galRow.photos || []).length) { m.textContent = "ما في صور لهذا العقار — أضف صوراً أولاً ليصير للرابط صفحة."; return; }
-  let html = galleryPage(galRow);
-  for (const p of galRow.photos) if (newBlobs[p]) html = html.split(`${BASE}/${esc(p)}`).join("data:image/jpeg;base64," + newBlobs[p]);
-  window.open(URL.createObjectURL(new Blob([html], { type: "text/html" })), "_blank");
-  m.textContent = "هذه معاينة من اللوحة — الرابط الحقيقي يشتغل بعد «نشر».";
+  const w = window.open("", "_blank");
+  m.textContent = "جارٍ تجهيز المعاينة…";
+  Promise.all(galRow.photos.map(loadPhoto)).then(urls => {
+    const html = galleryPage(galRow, urls.filter(Boolean));
+    const u = URL.createObjectURL(new Blob([html], { type: "text/html" }));
+    if (w) w.location.href = u; else window.open(u, "_blank");
+    m.textContent = "هذه معاينة من اللوحة — الرابط الحقيقي يشتغل بعد «نشر».";
+  });
 });
 $("galNew").addEventListener("click", () => {
   if (!galRow) return;
-  if (galRow.galKey && !confirm("الرابط القديم رح يبطل فوراً وما حدا يقدر يفتحه. متأكد؟")) return;
+  if (galReady(galRow) && !confirm("الرابط القديم رح يبطل فوراً وما حدا يقدر يفتحه. متأكد؟")) return;
   galRow.galKey = newKey();
+  galRow.galSecret = newSecret();
   galRow.updatedAt = new Date().toISOString();
   openGallery(galRow);
   render();
@@ -1374,7 +1471,7 @@ $("blurApply").addEventListener("click", () => {
     render();
     const s2 = upStat();
     s2.hidden = false; s2.className = "upstat";
-    s2.textContent = "انطبق التمويه — اضغط «نشر» ليوصل للموقع.";
+    s2.textContent = "انطبق التمويه — اضغط «نشر» ليتحفظ.";
     setTimeout(() => { s2.hidden = true; }, 4500);
   }, "image/jpeg", 0.82);
 });
