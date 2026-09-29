@@ -20,9 +20,11 @@ const DATA = (readJson('mk-data') || []).filter(x => x && x.code);
 
 /* canvas plumbing shared by the hero scene and the single-listing viewer */
 let cv = null, ctx = null, W = 0, H = 0, DPR = 1, SCENE_KEY = 'plots';
-function resize() { if (!cv) return; DPR = Math.min(2, devicePixelRatio || 1); W = cv.clientWidth; H = cv.clientHeight; cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0); }
+/* quality governor: weak phones start lighter, and any device that stays slow drops its canvas resolution step by step */
+let DPRCAP = (navigator.hardwareConcurrency || 8) <= 4 ? 1.5 : 2;
+function resize() { if (!cv) return; DPR = Math.min(DPRCAP, devicePixelRatio || 1); W = cv.clientWidth; H = cv.clientHeight; cv.width = W * DPR; cv.height = H * DPR; ctx.setTransform(DPR, 0, 0, DPR, 0, 0); }
 function setCanvas(el) { cv = el; ctx = el.getContext('2d'); resize(); }
-addEventListener('resize', () => { resize(); if (typeof FIT !== 'undefined') FIT.key = ''; staticDirty = true; });
+addEventListener('resize', () => { resize(); if (typeof FIT !== 'undefined') { FIT.key = ''; FIT.dirty = true; } staticDirty = true; });
 
 const TYPES = { land: 'أرض', villa: 'فيلا', farm: 'مزرعة', apt: 'شقة' };
 /* What to showcase is decided by the data, never by a hand-typed list:
@@ -276,10 +278,12 @@ function proj(p) {
   const x = p[0] * cyw + p[2] * syw, z0 = -p[0] * syw + p[2] * cyw, y = p[1] * cp - z0 * sp, z = p[1] * sp + z0 * cp, k = S3.f / Math.max(.3, S3.dist - z);
   return [S3.cx + x * k, S3.cy - y * k, z, k];
 }
+const TW = new Map();   // Arabic text measuring is slow: measure each label once, not on every frame
 function pill(x, y, text, big, alpha) {
   const fs = big ? 15 : 12, h = big ? 32 : 24;
   ctx.save(); ctx.globalAlpha = alpha; ctx.font = `800 ${fs}px ${FB}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-  const w = ctx.measureText(text).width + (big ? 30 : 20), r = h / 2, x0 = x - w / 2, y0 = y - h / 2;
+  const tk = fs + '|' + text; let tw = TW.get(tk); if (tw === undefined) { tw = ctx.measureText(text).width; TW.set(tk, tw); }
+  const w = tw + (big ? 30 : 20), r = h / 2, x0 = x - w / 2, y0 = y - h / 2;
   ctx.beginPath(); ctx.moveTo(x0 + r, y0); ctx.arcTo(x0 + w, y0, x0 + w, y0 + h, r); ctx.arcTo(x0 + w, y0 + h, x0, y0 + h, r); ctx.arcTo(x0, y0 + h, x0, y0, r); ctx.arcTo(x0, y0, x0 + w, y0, r); ctx.closePath();
   ctx.fillStyle = COL('bg', .86); ctx.fill(); ctx.strokeStyle = COL('acc', big ? 1 : .55); ctx.lineWidth = big ? 1.6 : 1; ctx.stroke();
   ctx.beginPath(); ctx.moveTo(x, y0 + h); ctx.lineTo(x, y0 + h + (big ? 12 : 8)); ctx.stroke();
@@ -289,10 +293,14 @@ const ringPts = (r, y, cx = 0, cz = 0, n = 48) => { const o = []; for (let i = 0
 const wrapPi = d => ((d + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
 const eoC = x => 1 - Math.pow(1 - x, 3);
 /* fit the whole ring into the free band between the headline and the info card, on any screen */
-const FIT = { key: '', f: 500, cy: 0 };
+const FIT = { key: '', f: 500, cy: 0, dirty: true, top: 0, bottom: 0 };
 function plotsFit(n, R) {
-  const wide = W >= 900, ti = $('htitle'), pc = $('pcard');
-  const top = wide ? 84 : ti.offsetTop + ti.offsetHeight + 10, bottom = (pc.offsetTop || H - 190) - 8, availW = wide ? W * .56 : W * 1.5;   // on phones the ring may run past the edges, like a carousel
+  const wide = W >= 900;
+  if (FIT.dirty) {   // layout reads only when something actually moved, never on every frame
+    const ti = $('htitle'), pc = $('pcard');
+    FIT.top = wide ? 84 : ti.offsetTop + ti.offsetHeight + 10; FIT.bottom = (pc.offsetTop || H - 190) - 8; FIT.dirty = false;
+  }
+  const top = FIT.top, bottom = FIT.bottom, availW = wide ? W * .56 : W * 1.5;   // on phones the ring may run past the edges, like a carousel
   const key = [W, H, top, bottom, n, R].join();
   if (key === FIT.key) return;
   FIT.key = key;
@@ -442,6 +450,7 @@ document.querySelectorAll('.cover[data-cat]').forEach((el, i) => { el.innerHTML 
     });
     if (cnt) cnt.textContent = n === rows.length ? n + ' عقار متاح' : n + ' من ' + rows.length + ' عقار';
     if (none) none.hidden = n > 0;
+    document.dispatchEvent(new Event('mk:layout'));   // positions changed: the scroll loop re-measures
   }
   [fa, fc, fb].forEach(s => s && s.addEventListener('change', apply)); apply();
 })();
@@ -469,29 +478,58 @@ document.querySelectorAll('.cover[data-cat]').forEach((el, i) => { el.innerHTML 
 let REVEAL = [...document.querySelectorAll('.rv')], COUNTS = [...document.querySelectorAll('[data-count]')], ROWSEL = [...document.querySelectorAll('.row')];
 let lastY = scrollY, VEL = 0, lastT = performance.now(), m1x = 0, m2x = 0;
 const root = document.documentElement.style;
+/* element positions are measured once (and again when the layout changes), not read from the DOM on every frame */
+const LAY = { dirty: true, rv: [], rows: [], counts: [], reveal: null, mq: null, y: -1 };
+const absTop = el => { let t = 0; for (let e = el; e; e = e.offsetParent) t += e.offsetTop; return t; };
+const bx = el => [el, absTop(el), el.offsetHeight];
+function measure() {
+  LAY.dirty = false; LAY.y = -1;
+  LAY.rv = REVEAL.map(bx); LAY.rows = ROWSEL.map(bx); LAY.counts = COUNTS.map(bx);
+  const rv = $('reveal'), a = $('m1'); LAY.reveal = rv ? bx(rv) : null; LAY.mq = a ? bx(a) : null;
+  if (typeof FIT !== 'undefined') FIT.dirty = true;
+}
+if (window.ResizeObserver) new ResizeObserver(() => { LAY.dirty = true; }).observe(document.body);
+document.addEventListener('mk:layout', () => { LAY.dirty = true; });
+addEventListener('resize', () => { LAY.dirty = true; }); addEventListener('load', () => { LAY.dirty = true; });
+if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { LAY.dirty = true; });
+let govN = 0, govT = 0;
 function frame(now) {
-  const dt = Math.min(50, now - lastT) / 16.67; lastT = now; DT = dt;
+  const raw = now - lastT, dt = Math.min(50, raw) / 16.67; lastT = now; DT = dt;
   const y = scrollY, vh = innerHeight, dv = y - lastY; lastY = y; VEL += (dv - VEL) * .15;
-  root.setProperty('--navbg', HOME ? clamp(y / (vh * .4)).toFixed(3) : 1);
-  root.setProperty('--dock', (HOME ? clamp((y - vh * .7) / (vh * .3)) : clamp((y - 240) / 200)).toFixed(3));
+  if (LAY.dirty) measure();
+  const moved = y !== LAY.y; LAY.y = y;   // scroll-driven styles only need updating when the scroll position changed
+  if (moved) {
+    root.setProperty('--navbg', HOME ? clamp(y / (vh * .4)).toFixed(3) : 1);
+    root.setProperty('--dock', (HOME ? clamp((y - vh * .7) / (vh * .3)) : clamp((y - 240) / 200)).toFixed(3));
+  }
   STEER.x += (STEER.tx - STEER.x) * .08; STEER.y += (STEER.ty - STEER.y) * .08;
-  if (HERO && y < vh * 1.05) { if (!reduce || staticDirty) { staticDirty = false; drawPlots(now); } }
-  if (TILEV && TILE.vis) { if (!reduce || staticDirty) { staticDirty = false; drawTile(now); } }
+  const heroOn = HERO && y < vh * 1.05, tileOn = TILEV && TILE.vis;
+  if (heroOn) { if (!reduce || staticDirty) { staticDirty = false; drawPlots(now); } }
+  if (tileOn) { if (!reduce || staticDirty) { staticDirty = false; drawTile(now); } }
+  /* quality governor: if the 3D canvas stays under ~30fps for 40 frames, lower its resolution one step */
+  if ((heroOn || tileOn) && !reduce && raw < 200) {
+    govN++; govT += raw;
+    if (govN >= 40) { if (govT / govN > 32 && DPRCAP > 1) { DPRCAP = Math.max(1, DPRCAP - .5); resize(); staticDirty = true; } govN = 0; govT = 0; }
+  } else { govN = 0; govT = 0; }
   if (!reduce) {
-    if (HERO) { const hc = $('hcopy'); hc.style.transform = `translateY(${y * .4}px)`; hc.style.opacity = 1 - clamp(y / (vh * .7)); }
+    if (HERO && moved) { const hc = $('hcopy'); hc.style.transform = `translateY(${y * .4}px)`; hc.style.opacity = 1 - clamp(y / (vh * .7)); }
     const a = $('m1'), b = $('m2');
-    if (a && b) {
-      const sp = 1.2 + Math.abs(VEL) * .9, dir = VEL < -.2 ? -1 : 1, w1 = a.scrollWidth / 3, w2 = b.scrollWidth / 3;
-      if (w1 > 0) { m1x = (m1x - sp * dir * dt + w1) % w1; m2x = (m2x + sp * dir * dt * .8 + w2) % w2; a.style.transform = `translateX(${-m1x}px)`; b.style.transform = `translateX(${-w2 + m2x}px)`; }
+    if (a && b && LAY.mq) {
+      const t = LAY.mq[1] - y;
+      if (t < vh * 1.1 && t + LAY.mq[2] > -vh * .3) {   // the marquee only runs while it can be seen
+        const sp = 1.2 + Math.abs(VEL) * .9, dir = VEL < -.2 ? -1 : 1, w1 = a.scrollWidth / 3, w2 = b.scrollWidth / 3;
+        if (w1 > 0) { m1x = (m1x - sp * dir * dt + w1) % w1; m2x = (m2x + sp * dir * dt * .8 + w2) % w2; a.style.transform = `translateX(${-m1x}px)`; b.style.transform = `translateX(${-w2 + m2x}px)`; }
+      }
     }
-    for (const el of REVEAL) {
-      const r = el.getBoundingClientRect(); if (r.top > vh * 1.2 || r.bottom < -vh * .2) continue;
-      const p = eo(clamp((vh * .96 - r.top) / (vh * .26))); el.style.opacity = p; el.style.transform = `translateY(${(1 - p) * 40}px)`;
+    if (moved) {
+      for (const [el, top, h] of LAY.rv) {
+        const t = top - y; if (t > vh * 1.2 || t + h < -vh * .2) continue;
+        const p = eo(clamp((vh * .96 - t) / (vh * .26))); el.style.opacity = p; el.style.transform = `translateY(${(1 - p) * 40}px)`;
+      }
+      for (const [el, top, h] of LAY.rows) { const t = top - y; if (t > vh * 1.2 || t + h < -40) continue; el.style.setProperty('--lx', eo(clamp((vh * .98 - t) / (vh * .4))).toFixed(3)); }
+      if (LAY.reveal) { const [, top, h] = LAY.reveal, t = top - y; $('circle').style.setProperty('--cr', (6 + eo(clamp(-t / (h - vh * 1.05))) * 94).toFixed(1) + '%'); }
+      for (const [el, top] of LAY.counts) { const t = top - y; el.textContent = Math.round(+el.dataset.count * eo(clamp((vh * .95 - t) / (vh * .3)))); }
     }
-    for (const el of ROWSEL) { const r = el.getBoundingClientRect(); if (r.top > vh * 1.2 || r.bottom < -40) continue; el.style.setProperty('--lx', eo(clamp((vh * .98 - r.top) / (vh * .4))).toFixed(3)); }
-    const rv = $('reveal');
-    if (rv) { const r = rv.getBoundingClientRect(); $('circle').style.setProperty('--cr', (6 + eo(clamp(-r.top / (r.height - vh * 1.05))) * 94).toFixed(1) + '%'); }
-    for (const el of COUNTS) { const r = el.getBoundingClientRect(); el.textContent = Math.round(+el.dataset.count * eo(clamp((vh * .95 - r.top) / (vh * .3)))); }
   }
   requestAnimationFrame(frame);
 }
