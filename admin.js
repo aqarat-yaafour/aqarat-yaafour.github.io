@@ -178,7 +178,7 @@ async function repoTree(repo) {
   const base = (await gh(`/repos/${o}/${repo}/git/commits/${head}`)).tree.sha;
   const t = await gh(`/repos/${o}/${repo}/git/trees/${base}?recursive=1`);
   const map = new Map((t && t.tree || []).filter(e => e.type === "blob").map(e => [e.path, e.sha]));
-  return { head, base, map };
+  return { head, base, map, truncated: !!(t && t.truncated) };
 }
 
 /** بصمة Git للملف محلياً: نعرف قبل الرفع إن كان تغيّر فعلاً */
@@ -224,7 +224,11 @@ async function commit(repo, files, message, deletes, snap, retried) {
     if (!retried && /fast.?forward/i.test(e.message)) return commit(repo, files, message, deletes, null, true);
     throw e;
   }
-  return { sha: c.sha, changed: tree.length };
+  return {
+    sha: c.sha, changed: tree.length,
+    written: tree.filter(e => e.sha !== null).map(e => e.path),
+    removed: tree.filter(e => e.sha === null).map(e => e.path)
+  };
 }
 
 /* ===== مولّد الموقع — التصميم الجديد (زمرّد ملكي + خط جريء عريض) =====
@@ -1650,12 +1654,141 @@ async function syncWithRemote() {
   return m;
 }
 
+/* ===== التحقق من أن الموقع تحدّث فعلاً =====
+   "نُشر" على GitHub لا يعني أن الموقع تغيّر: GitHub Pages يبنيه بعد ذلك وقد يفشل بصمت.
+   نفحص الموقع الحي حتى يطابق ما نشرناه، ونسأل GitHub عن حالة البناء إن سمح المفتاح. */
+const VERIFY = { every: 6000, max: 240000 };   /* الاختبارات تصغّرها */
+let VERIFY_ID = 0, RUNS_OK = true;
+async function pagesBuild(sha) {
+  if (!RUNS_OK || !sha) return null;
+  try {
+    const r = await gh(`/repos/${CFG.owner}/${CFG.pub}/actions/runs?head_sha=${sha}&per_page=5`);
+    if (!r) { RUNS_OK = false; return null; }
+    const run = (r.workflow_runs || []).find(x => /pages/i.test(x.name || ""));
+    return run ? { status: run.status, conclusion: run.conclusion, url: run.html_url } : null;
+  } catch (e) { RUNS_OK = false; return null; }   /* المفتاح ما عنده صلاحية قراءة Actions: نكتفي بفحص الموقع */
+}
+async function verifyLive(res, files, note, kind) {
+  const id = ++VERIFY_ID, cur = () => id === VERIFY_ID;
+  const link = $("pubActions"); link.hidden = true;
+  const show = (t, k) => { if (cur()) say(note + t, k || kind, true); };   /* busy: updateBar ما بيمحوها */
+  const text = new Map(files.filter(f => typeof f.content === "string").map(f => [f.path, f.content]));
+  const written = res ? res.written : [];
+  const pref = ["data.json", "index.html"];
+  const targets = pref.filter(p => written.includes(p)).concat(written.filter(p => text.has(p) && !pref.includes(p))).slice(0, 3);
+  const gone = res ? res.removed.find(p => /\.html$/.test(p)) : null;
+  if (!res || (!targets.length && !gone)) { show(" · ما في تغيير على الموقع نفسه", kind); setTimeout(() => { if (cur()) { say("", ""); updateBar(); } }, 6000); return; }
+  const t0 = Date.now(); let net = 0, tick = 0;
+  while (cur() && Date.now() - t0 < VERIFY.max) {
+    const secs = Math.round((Date.now() - t0) / 1000);
+    try {
+      let ok = true;
+      if (targets.length) {
+        for (const p of targets) {
+          const r = await fetch(`${BASE}/${p}?v=${Date.now()}`, { cache: "no-store" });
+          if (!r.ok || (await r.text()) !== text.get(p)) { ok = false; break; }
+        }
+      } else ok = (await fetch(`${BASE}/${gone}?v=${Date.now()}`, { cache: "no-store" })).status === 404;
+      net = 0;
+      if (ok) { show(" · الموقع تحدّث فعلاً ✓ (بعد " + secs + " ث)", "ok"); setTimeout(() => { if (cur()) { say("", ""); updateBar(); } }, 15000); return; }
+    } catch (e) {
+      if (++net >= 3) { show(" (تعذّر التحقق الآلي من هذا المتصفح، افتح الموقع وتأكد بنفسك)", "warn"); return; }
+    }
+    if (tick++ % 2 === 1) {   /* كل مرتين: هل فشل بناء GitHub Pages؟ */
+      const b = await pagesBuild(res.sha);
+      if (b && b.status === "completed" && b.conclusion && b.conclusion !== "success") {
+        if (cur()) { link.href = b.url; link.hidden = false; }
+        show(" — لكن بناء الموقع على GitHub فشل (" + b.conclusion + "). افتح سجل البناء.", "bad"); return;
+      }
+    }
+    show(" · جارٍ التأكد من تحديث الموقع… " + secs + " ث", kind);
+    await sleep(VERIFY.every);
+  }
+  if (cur()) {
+    link.href = `https://github.com/${CFG.owner}/${CFG.pub}/actions`; link.hidden = false;
+    show(" — لكن الموقع ما تحدّث خلال " + Math.round(VERIFY.max / 60000) + " دقائق. ممكن بناء GitHub متأخر أو فشل: افتح سجل البناء.", "bad");
+  }
+}
+
+/* ===== فحص الاتصال: قراءة فقط، يكشف المشاكل قبل النشر ===== */
+async function runChecks() {
+  const box = $("chkList"); box.textContent = "";
+  const icon = { ok: "✓ ", warn: "⚠️ ", bad: "✗ ", wait: "… " };
+  const put = (el, st, name, info) => { el.className = "chk " + st; el.textContent = icon[st] + name + (info ? " — " + info : ""); };
+  let bad = 0, warn = 0;
+  const step = async (name, fn) => {
+    const el = document.createElement("div"); box.appendChild(el); put(el, "wait", name);
+    try { const r = (await fn()) || {}; if (r.warn) warn++; put(el, r.warn ? "warn" : "ok", name, r.info); }
+    catch (e) { bad++; put(el, "bad", name, e.message); }
+  };
+  const repoInfo = async (name, mustBePrivate) => {
+    const i = await gh(`/repos/${CFG.owner}/${name}`);
+    if (!i) throw new Error("ما لقيت المستودع، أو المفتاح ما بيوصله");
+    if (!i.permissions || !i.permissions.push) throw new Error("المفتاح ما عنده صلاحية كتابة عليه");
+    if (mustBePrivate && i.private === false) throw new Error("المستودع «عام» وصورك وبياناتك مكشوفة! حوّله لخاص من إعداداته");
+    return { info: mustBePrivate ? "خاص، وفيه صلاحية كتابة" : "فيه صلاحية كتابة" };
+  };
+  await step("المستودع العام (الموقع)", () => repoInfo(CFG.pub, false));
+  await step("المستودع الخاص (البيانات والصور)", () => repoInfo(CFG.priv, true));
+  let pf = null;
+  await step("قراءة بيانات المخزون", async () => {
+    pf = await readFile(CFG.priv, "private.json");
+    if (!pf) return { warn: true, info: "ما في private.json بعد (بيتعمل عند أول نشر)" };
+    return { info: pf.json.length + " عقار" };
+  });
+  let privSnap = null;
+  await step("شجرة ملفات المستودعين", async () => {
+    const [a, b] = await Promise.all([repoTree(CFG.pub), repoTree(CFG.priv)]);
+    privSnap = b;
+    if (a.truncated || b.truncated) throw new Error("الشجرة كبيرة وتقطّعت: النشر ممكن يفوّت ملفات");
+    return { info: a.map.size + " ملف عام · " + b.map.size + " ملف خاص" };
+  });
+  await step("النسخ السابقة", async () => {
+    const l = await gh(`/repos/${CFG.owner}/${CFG.priv}/commits?path=private.json&per_page=10`);
+    return { info: (l ? l.length : 0) + " نسخة محفوظة" };
+  });
+  await step("قراءة صور المستودع الخاص", async () => {
+    const p = privSnap && [...privSnap.map.keys()].find(k => k.startsWith("img/"));
+    if (!p) return { info: "ما في صور بعد" };
+    if (!(await ghRaw(CFG.priv, p))) throw new Error("ما قدرت أقرأ " + p);
+    return { info: "قرأت " + p };
+  });
+  await step("قراءة الموقع الحي", async () => {
+    const r = await fetch(`${BASE}/data.json?v=${Date.now()}`, { cache: "no-store" });
+    if (!r.ok) throw new Error("الموقع ردّ " + r.status);
+    const n = (await r.json()).length, mine = pf ? pf.json.filter(isLive).length : null;
+    return mine !== null && n !== mine ? { warn: true, info: n + " عقار على الموقع، و" + mine + " متاح عندك (ممكن نشر لم يكتمل)" } : { info: n + " عقار منشور" };
+  });
+  await step("حالة بناء الموقع (Actions)", async () => {
+    RUNS_OK = true;
+    let r = null; try { r = await gh(`/repos/${CFG.owner}/${CFG.pub}/actions/runs?per_page=5`); } catch (e) { r = null; }
+    if (!r) return { warn: true, info: "المفتاح ما بيقرأ Actions، فالتحقق بعد النشر بيعتمد على فحص الموقع (كافٍ)" };
+    const run = (r.workflow_runs || []).find(x => /pages/i.test(x.name || ""));
+    if (!run) return { info: "ما في عمليات بناء بعد" };
+    if (run.conclusion && run.conclusion !== "success") return { warn: true, info: "آخر بناء: " + run.conclusion };
+    return { info: "آخر بناء: " + (run.conclusion || run.status) };
+  });
+  await step("حدود GitHub وساعة الجهاز", async () => {
+    const r = await fetch("https://api.github.com/rate_limit", { headers: { Authorization: "Bearer " + CFG.token } });
+    if (!r.ok) throw new Error("ردّ " + r.status);
+    const j = await r.json(), c = j.resources.core, dh = r.headers.get("date");
+    const skew = dh ? Math.abs(Date.now() - Date.parse(dh)) / 60000 : 0;
+    const bits = ["متبقّي " + c.remaining + " من " + c.limit + " طلب"];
+    if (skew > 10) bits.push("ساعة جهازك متأخرة/متقدمة " + Math.round(skew) + " دقيقة: تواريخ العقارات ستكون خاطئة");
+    return { warn: c.remaining < 200 || skew > 10, info: bits.join(" · ") };
+  });
+  const sum = document.createElement("div");
+  sum.className = "chk " + (bad ? "bad" : warn ? "warn" : "ok");
+  sum.textContent = bad ? `✗ ${bad} مشكلة تحتاج إصلاحاً قبل النشر` : warn ? `⚠️ الاتصال شغّال، مع ${warn} ملاحظة` : "✓ كل شي سليم، فيك تنشر";
+  box.appendChild(sum);
+}
+
 /* ===== النشر ===== */
 async function publish() {
   if (!isDirty()) return;
   $("pubBtn").disabled = true;
   try {
-    say("جارٍ التأكد من عدم وجود تعديلات من جهاز آخر…", "warn", true);
+    say("جارٍ فحص تعديلات الأجهزة الأخرى…", "warn", true);
     const merged = await syncWithRemote();
     const live = liveRows();
 
@@ -1744,7 +1877,7 @@ async function publish() {
     say("جارٍ فحص الجودة…", "warn", true);
     validateOutput(files, live, cols, pubHas);
     say("جارٍ الرفع…", "warn", true);
-    await commit(CFG.pub, files, "تحديث المخزون من لوحة الإدارة", deletes, pubSnap);
+    const pubRes = await commit(CFG.pub, files, "تحديث المخزون من لوحة الإدارة", deletes, pubSnap);
 
     for (const p in newBlobs) photoUrls.delete(p);
     newBlobs = {};
@@ -1754,9 +1887,9 @@ async function publish() {
     const took = merged && merged.taken.length;
     render();
     /* بعد render حتى لا تمحو رسالة النجاح: تبقى ظاهرة (أطول لو دُمجت تعديلات من جهاز آخر) */
-    say("اننشر ✓ الموقع بيتحدّث خلال دقيقة" + (unsafe.size ? " (تعذّر ترحيل " + unsafe.size + " صورة)" : "")
-      + (took ? " · دُمجت تعديلات من جهاز آخر: " + merged.taken.join("، ") : ""), unsafe.size || took ? "warn" : "ok", true);
-    setTimeout(() => { say("", ""); updateBar(); }, took ? 12000 : 6000);
+    const note = "اننشر ✓" + (unsafe.size ? " (تعذّر ترحيل " + unsafe.size + " صورة)" : "")
+      + (took ? " · دُمجت تعديلات من جهاز آخر: " + merged.taken.join("، ") : "");
+    verifyLive(pubRes, files, note, unsafe.size || took ? "warn" : "ok").catch(() => { });
   } catch (e) {
     say("ما زبط النشر: " + e.message, "bad");
     $("pubBtn").disabled = false;
@@ -1976,6 +2109,10 @@ $("f_status").addEventListener("change", () => {
   if (sold && !$("f_sold").value) $("f_sold").value = today();
 });
 $("verBtn").addEventListener("click", openVersions);
+$("chkBtn").addEventListener("click", () => { $("chkDlg").showModal(); runChecks(); });
+$("chkAgain").addEventListener("click", runChecks);
+$("chkClose").addEventListener("click", () => $("chkDlg").close());
+$("chkDone").addEventListener("click", () => $("chkDlg").close());
 $("verClose").addEventListener("click", () => $("verDlg").close());
 $("verDone").addEventListener("click", () => $("verDlg").close());
 $("outBtn").addEventListener("click", () => {

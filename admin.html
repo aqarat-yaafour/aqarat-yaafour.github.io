@@ -183,6 +183,11 @@ option{background:#0a2e24;color:var(--ink)}
 .err{color:var(--danger);font-weight:700;font-size:14px;flex-basis:100%}
 .state{padding:50px 20px;text-align:center;color:var(--ink-2);font-weight:700}
 
+.chk{padding:9px 14px;border:1px solid var(--line);border-radius:14px;font-weight:700;font-size:14px;line-height:1.7;background:rgba(3,20,14,.35)}
+.chk.ok{color:var(--ok)}
+.chk.warn{color:var(--gold-light)}
+.chk.bad{color:var(--danger);border-color:var(--danger-line);background:var(--danger-bg)}
+.chk.wait{color:var(--muted)}
 .ver-list{display:flex;flex-direction:column;gap:10px}
 .ver{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:rgba(3,20,14,.35)}
 .ver b{display:block;font-size:15px}
@@ -265,6 +270,7 @@ option{background:#0a2e24;color:var(--ink)}
     <div class="top-actions">
       <button class="btn btn-primary" id="addBtn" type="button">+ عقار جديد</button>
       <button class="btn btn-ghost btn-sm" id="verBtn" type="button">↩︎ النسخ السابقة</button>
+      <button class="btn btn-ghost btn-sm" id="chkBtn" type="button">🩺 فحص الاتصال</button>
       <button class="btn btn-ghost btn-sm" id="outBtn" type="button">إعدادات</button>
     </div>
   </header>
@@ -291,12 +297,28 @@ option{background:#0a2e24;color:var(--ink)}
 
 <div class="publish" id="pubBar" hidden>
   <span class="msg" id="pubMsg"></span>
+  <a class="btn btn-ghost btn-sm" id="pubActions" target="_blank" rel="noopener" hidden>سجل بناء الموقع</a>
   <button class="btn btn-primary" id="pubBtn" type="button">نشر على الموقع</button>
   <button class="btn btn-ghost btn-sm" id="dropBtn" type="button" hidden>تراجع عن التعديلات</button>
 </div>
 
 
 <!-- نافذة الرابط الخاص للصور -->
+<dialog id="chkDlg" aria-labelledby="chkTitle">
+  <div class="dlg">
+    <div class="dlg-head">
+      <h2 id="chkTitle">فحص الاتصال</h2>
+      <button class="x" type="button" id="chkClose" aria-label="إغلاق">×</button>
+    </div>
+    <p class="hint" style="margin:0">يجرّب كل ما تحتاجه اللوحة من GitHub (قراءة فقط، ما بيغيّر شي) ويخبرك إن كان في مشكلة قبل ما تنشر.</p>
+    <div id="chkList" class="ver-list"></div>
+    <div class="dlg-foot">
+      <button class="btn btn-primary" type="button" id="chkAgain">أعد الفحص</button>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost" type="button" id="chkDone">إغلاق</button>
+    </div>
+  </div>
+</dialog>
 <dialog id="verDlg" aria-labelledby="verTitle">
   <div class="dlg">
     <div class="dlg-head">
