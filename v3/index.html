@@ -197,6 +197,29 @@ html.lock{overflow:hidden}
 html.lock .dock{transform:translateY(140%)!important}
 @media(min-width:760px){.sheet{left:50%;right:auto;width:560px;margin-left:-280px}}
 
+/* floating-parcels info card */
+.hero .pcard{display:none}
+.hero.plots-on .pcard{display:block;position:absolute;z-index:6;left:14px;right:14px;bottom:20px;max-width:520px;margin:0 auto;padding:14px 16px;border-radius:26px;background:rgba(var(--bg-rgb),.76);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border:1px solid rgba(var(--acc-rgb),.42);box-shadow:0 18px 50px var(--shadow)}
+.hero.plots-on .hbottom{display:none}
+.pc-top{display:flex;align-items:center;gap:8px;font-size:12px}
+.pc-type{background:var(--gold);color:var(--on-acc);font-weight:800;padding:4px 11px;border-radius:99px}
+.pc-code{color:var(--mute);direction:ltr;font-weight:700}
+.pc-dots{margin-inline-start:auto;display:flex;gap:5px}
+.pc-dots i{width:6px;height:6px;border-radius:3px;background:rgba(var(--ink-rgb),.24);transition:width .35s,background .35s}
+.pc-dots i.on{width:20px;background:var(--gold)}
+.pc-title{font-size:20px;font-weight:var(--fbw);margin-top:8px;line-height:1.35;animation:pcin .5s var(--ease)}
+.pc-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-top:3px}
+.pc-row b{font-size:24px;color:var(--gold2);font-weight:var(--fbw)}
+.pc-row small{color:var(--mute);font-size:12.5px;text-align:left}
+.pc-actions{display:flex;gap:8px;margin-top:12px;align-items:center}
+.pc-wa{flex:1;height:46px;border-radius:99px;background:#25d366;color:#062b12;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:14.5px;white-space:nowrap}
+.pc-more{height:46px;padding:0 16px;border-radius:99px;border:1px solid var(--line);font-weight:800;font-size:14px;color:var(--ink)}
+.pc-nav{flex:none;width:46px;height:46px;border-radius:50%;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;background:rgba(var(--ink-rgb),.06);color:var(--ink)}
+@keyframes pcin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@media(min-width:900px){
+  .hero.plots-on .pcard{left:calc(30% - 260px);right:auto;width:520px;margin:0;bottom:30px}
+  .hero.side3d .touchhint{left:30%}
+}
 /* palette switcher (preview only) */
 .pal{position:fixed;left:12px;top:74px;z-index:66;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .pal-btn{height:44px;padding:0 14px 0 10px;border-radius:99px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;
@@ -242,6 +265,17 @@ html.lock .dock{transform:translateY(140%)!important}
     </h1>
   </div>
   <div class="touchhint" id="thint"><i></i>المس الأرض</div>
+  <div class="pcard" id="pcard" aria-live="polite">
+    <div class="pc-top"><span class="pc-type" id="pcType"></span><span class="pc-code" id="pcCode"></span><span class="pc-dots" id="pcDots"></span></div>
+    <div class="pc-title" id="pcTitle"></div>
+    <div class="pc-row"><b id="pcPrice"></b><small id="pcMeta"></small></div>
+    <div class="pc-actions">
+      <button class="pc-nav" id="pcPrev" aria-label="السابق"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+      <a class="pc-wa" id="pcWa" href="#">استفسر على واتساب</a>
+      <button class="pc-more" id="pcMore">التفاصيل</button>
+      <button class="pc-nav" id="pcNext" aria-label="التالي"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+    </div>
+  </div>
   <div class="hbottom">
     <p class="w" style="animation-delay:1.8s">أراضٍ وفلل ومزارع — معاينة، تدقيق أوراق، ومرافقة حتى التسجيل.</p>
     <a class="round w" data-wa href="https://wa.me/963996606813" style="animation-delay:1.9s"><span>تواصل<br>الآن</span></a>
@@ -538,16 +572,24 @@ function addRipple(e) {
 const heroEl = $('hero');
 let heroDown = false, heroLastX = 0;
 function steerFrom(e) { const r = heroEl.getBoundingClientRect(); STEER.tx = clamp((e.clientX - r.left) / r.width * 2 - 1, -1, 1); STEER.ty = clamp((e.clientY - r.top) / r.height * 2 - 1, -1, 1); }
+let heroTap = null;
 heroEl.addEventListener('pointerdown', e => {
+  heroTap = { x: e.clientX, y: e.clientY, t: performance.now(), moved: false }; PLS.lastUser = performance.now();
   heroDown = true; heroLastX = e.clientX; S3.drag = true; S3.vyaw = 0; steerFrom(e);
   if (SCENE_KEY === 'terrain') addRipple(e); else $('thint').style.opacity = 0;
 });
 heroEl.addEventListener('pointermove', e => {
+  if (heroTap && Math.hypot(e.clientX - heroTap.x, e.clientY - heroTap.y) > 9) heroTap.moved = true;
   if (heroDown) { const dx = e.clientX - heroLastX; heroLastX = e.clientX; S3.yaw += dx * .0085; S3.vyaw = S3.vyaw * .5 + dx * .0085 * .5; }
   if (e.pointerType === 'mouse' || heroDown) steerFrom(e);
   if (SCENE_KEY === 'terrain' && (e.pointerType === 'mouse' || e.buttons)) addRipple(e);
 });
-const heroUp = () => { heroDown = false; S3.drag = false; STEER.tx = 0; STEER.ty = 0; };
+const heroUp = e => {
+  if (e && e.type === 'pointerup' && heroTap && !heroTap.moved && performance.now() - heroTap.t < 450 && SCENE_KEY === 'plots') {
+    const r = cv.getBoundingClientRect(); plotTap(e.clientX - r.left, e.clientY - r.top);
+  }
+  heroTap = null; heroDown = false; S3.drag = false; STEER.tx = 0; STEER.ty = 0; PLS.lastUser = performance.now();
+};
 ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => heroEl.addEventListener(ev, heroUp));
 addEventListener('deviceorientation', e => { if (e.gamma != null) tiltTarget = clamp(e.gamma / 30, -1, 1); });
 setTimeout(() => { const h = $('thint'); if (h) h.style.opacity = 0; }, 7000);
@@ -585,7 +627,7 @@ function box(cx, cy, cz, sx, sy, sz, s = 'main', win = {}) {
   return F;
 }
 function pyr(cx, by, cz, r, h, s = 'leaf') {
-  const ap = [cx, by + h, cz], b = [0, 1, 2, 3].map(i => { const a = .78 + i * Math.PI / 2; return [cx + Math.cos(a) * r, by, cz + Math.sin(a) * r]; }), out = [];
+  const ap = [cx, by + h, cz], b = [0, 1, 2, 3].map(i => { const a = Math.PI / 4 + i * Math.PI / 2; return [cx + Math.cos(a) * r, by, cz + Math.sin(a) * r]; }), out = [];
   for (let i = 0; i < 4; i++) {
     let tri = [b[i], b[(i + 1) % 4], ap];
     const n = v3.cross(v3.sub(tri[1], tri[0]), v3.sub(tri[2], tri[0]));
@@ -611,12 +653,12 @@ function draw3d(prims, o = {}) {
     n[0] /= l; n[1] /= l; n[2] /= l;
     if (q.cull !== false && (-n[0] * a[0] - n[1] * a[1] + n[2] * (S3.dist - a[2])) <= 0) return null;
     let z = 0; for (const w of v) z += w[2];
-    return { q, v, n, z: z / v.length, lay: q.lay };
+    return { q, v, n, z: z / v.length + (q.zb || 0), lay: q.lay };
   };
   const items = [];
   for (const q of prims) {
     if (q.k === 'f') { const it = faceItem(q); if (it) items.push(it); }
-    else if (q.k === 'l') { const v = q.p.map(V); let z = 0; for (const w of v) z += w[2]; items.push({ q, v, z: z / v.length, lay: q.lay }); }
+    else if (q.k === 'l') { const v = q.p.map(V); let z = 0; for (const w of v) z += w[2]; items.push({ q, v, z: z / v.length + (q.zb || 0), lay: q.lay }); }
     else { const v = V(q.p); items.push({ q, v, z: v[2], lay: q.lay }); }
   }
   items.sort((A, B) => A.lay - B.lay || A.z - B.z);
@@ -634,6 +676,8 @@ function draw3d(prims, o = {}) {
       case 'door': fill = COL('acc2', .16 * am); stroke = COL('acc2', .9 * am); break;
       case 'water': solid = false; fill = COL('acc2', .24 * am); stroke = COL('acc2', .8 * am); break;
       case 'tile': fill = COL('ink', (.04 + .1 * b) * am); stroke = COL('ink', .32 * am); break;
+      case 'grass': fill = COL('acc', (.05 + .1 * b) * am); stroke = COL('ink', .38 * am); break;
+      case 'rock': fill = COL('ink', (.03 + .08 * b) * am); stroke = COL('ink', .3 * am); break;
       case 'leaf': fill = COL('acc', (.1 + .2 * b) * am); stroke = COL('acc', .75 * am); break;
       case 'glow': solid = false; fill = COL('acc2', .38 * am); stroke = COL('acc2', 1 * am); lw = 1.6; break;
       default: fill = COL('acc', (.05 + .2 * b) * am); stroke = COL('acc', .62 * am); lw = 1.1;
@@ -666,7 +710,7 @@ function paintBg() {
   gr.addColorStop(0, `rgba(${ar},${ag},${ab},.16)`); gr.addColorStop(1, `rgba(${ar},${ag},${ab},0)`);
   ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
 }
-function cam(dist, fk, cyf, pitch) { S3.dist = dist; S3.pitch = pitch; S3.f = Math.min(W, H * .62) * fk; S3.cx = W / 2; S3.cy = H * cyf; }
+function cam(dist, fk, cyf, pitch) { S3.dist = dist; S3.pitch = pitch; S3.f = Math.min(W, H * .62) * fk; S3.cx = (W >= 900 && SCENE_KEY !== 'grove') ? W * .3 : W / 2; S3.cy = H * cyf; }   // on wide screens the scene sits left, away from the headline
 function stepYaw(auto) { if (!S3.drag) { S3.yaw += S3.vyaw * DT + auto * DT; S3.vyaw *= Math.pow(.93, DT); } }
 const SC_CACHE = {};
 const cached = (k, fn) => SC_CACHE[k] || (SC_CACHE[k] = fn());
@@ -774,43 +818,150 @@ function drawTunnel(now) {
   }
 }
 
-/* ---- 5. floating land parcels ---- */
-function tileLocal(kind, seed) {
-  const P = [...box(0, 0, 0, 1.9, .16, 1.9, 'tile')];
-  if (kind === 'land') {
-    P.push(Lp(rectLoop(-.7, -.7, .7, .7, .09), 'acc', .9, 1.3, 1, 1));
-    for (let i = 0; i < 3; i++) P.push(Lp([[-.7, .09, -.3 + i * .3], [-.2, .09, -.4 + i * .3 + seed % 2 * .1], [.3, .09, -.2 + i * .3], [.7, .09, -.35 + i * .3]], 'acc', .4, 1));
-    [[-.7, -.7], [.7, -.7], [.7, .7], [-.7, .7]].forEach(([x, z]) => P.push(Lp([[x, .09, z], [x, .42, z]], 'acc2', .9, 1.4), Dp([x, .44, z], 2.2, 'acc2', 1)));
-  } else if (kind === 'villa') {
-    P.push(...box(-.25, .36, 0, .9, .56, .8, 'main', { front: [[0, .02, .25, .25]] }), ...box(-.25, .66, 0, 1.02, .07, .92, 'roof'));
-    P.push(...box(.4, .49, .05, .55, .82, .55, 'main', { front: [[0, .1, .2, .22]] }), ...box(.4, .93, .05, .66, .07, .66, 'roof'));
-    P.push(Fp([[-.5, .09, .6], [.4, .09, .6], [.4, .09, .8], [-.5, .09, .8]], 'water', 1, false));
-  } else if (kind === 'farm') {
-    [[-.5, -.5], [0, -.55], [.5, -.45], [-.45, .1], [.05, .05], [.5, .1]].forEach(([x, z]) => P.push(...tree(x, z, .8 + (seed % 3) * .1)));
-    P.push(...box(-.15, .3, .58, .6, .36, .36, 'main'), ...pyr(-.15, .48, .58, .52, .3, 'roof'));
+/* ---- 5. floating land parcels: every tile is a real listing ---- */
+const zb = (q, v = .35) => (q.zb = v, q);   // depth bias so ground details win the painter's sort against their own slab
+const areaScale = x => Math.max(.84, Math.min(1.1, Math.sqrt((x.area_m2 || x.bua || 3000) / 5500)));
+function tileLocal(x, seed) {
+  const h = areaScale(x), top = .09, P = [], depth = 1.25 * h;
+  P.push(...box(0, 0, 0, 2 * h, .18, 2 * h, 'grass'));
+  P.push(...pyr(0, -top, 0, h * 1.4142, -depth, 'rock'));                       // the rock the island hangs on
+  for (const f of [.3, .58, .82]) { const r = h * (1 - f); P.push(Lp(rectLoop(-r, -r, r, r, -top - depth * f), 'ink', .2, 1)); }
+  const treeAt = (px, pz, th) => [Lp([[px, top, pz], [px, top + th * .3, pz]], 'ink', .55, 1.6), ...pyr(px, top + th * .2, pz, th * .28, th * .82)];
+  let labelY = 1.3;
+  if (x.cat === 'land') {
+    const a = .74 * h, y = top + .01;
+    P.push(zb(Lp(rectLoop(-a, -a, a, a, y), 'acc', .95, 1.4, 1, 1)));
+    for (let i = 0; i < 4; i++) { const z0 = -a + (i + .6) * a * .4; P.push(zb(Lp([[-a, y, z0], [-a * .3, y, z0 + .12 * ((seed + i) % 3 - 1)], [a * .35, y, z0 - .08], [a, y, z0 + .1]], 'acc', .38, 1))); }
+    [[-a, -a], [a, -a], [a, a], [-a, a]].forEach(([px, pz]) => P.push(Lp([[px, top, pz], [px, top + .42, pz]], 'acc2', .95, 1.5), Dp([px, top + .44, pz], 2.4, 'acc2', 1)));
+    P.push(Lp([[0, top, a * .55], [0, top + .72, a * .55]], 'ink', .7, 1.6), ...box(0, top + .84, a * .55, .66, .3, .05, 'roof'));
+    labelY = 1.35;
+  } else if (x.cat === 'villa') {
+    P.push(...box(-.3 * h, top + .28, -.1 * h, .95 * h, .56, .8 * h, 'main', { front: [[0, .02, .25, .25]], left: [[0, .02, .22, .25]] }));
+    P.push(...box(-.3 * h, top + .595, -.1 * h, 1.07 * h, .07, .92 * h, 'roof'));
+    P.push(...box(.42 * h, top + .41, -.05 * h, .58 * h, .82, .58 * h, 'main', { front: [[0, .12, .2, .24]], right: [[0, .12, .2, .24]] }));
+    P.push(...box(.42 * h, top + .855, -.05 * h, .7 * h, .07, .7 * h, 'roof'));
+    P.push(zb(Fp([[-.55 * h, top + .01, .5 * h], [.35 * h, top + .01, .5 * h], [.35 * h, top + .01, .84 * h], [-.55 * h, top + .01, .84 * h]], 'water', 1, false)), zb(Lp(rectLoop(-.55 * h, .5 * h, .35 * h, .84 * h, top + .02), 'acc2', .95, 1.3)));
+    P.push(...treeAt(.72 * h, .7 * h, .7), ...treeAt(-.75 * h, -.68 * h, .75));
+    labelY = 1.5;
+  } else if (x.cat === 'farm') {
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 4; c++) P.push(...treeAt(-.62 * h + c * .41 * h, -.58 * h + r * .38 * h, .62));
+    P.push(...box(.32 * h, top + .2, .66 * h, .7 * h, .4, .4 * h, 'main'), ...pyr(.32 * h, top + .4, .66 * h, .5 * h, .3, 'roof'), ...box(-.62 * h, top + .12, .68 * h, .2, .24, .2, 'main'));
+    labelY = 1.25;
   } else {
-    P.push(...box(0, .72, 0, .8, 1.28, .8, 'main', { front: [[-.2, .35, .22, .2], [.2, .35, .22, .2], [-.2, 0, .22, .2], [.2, 0, .22, .2], [-.2, -.35, .22, .2], [.2, -.35, .22, .2]] }), ...box(0, 1.4, 0, .92, .07, .92, 'roof'));
+    const win = []; for (const v of [-.36, 0, .36]) for (const u of [-.2, .2]) win.push([u * h, v, .2, .2]);
+    P.push(...box(0, top + .64, -.1 * h, .8 * h, 1.28, .8 * h, 'main', { front: win, right: win.map(([u, v, w, hh]) => [u, v, w, hh]) }), ...box(0, top + 1.32, -.1 * h, .92 * h, .07, .92 * h, 'roof'));
+    P.push(...box(0, top + .1, .5 * h, .5 * h, .2, .3 * h, 'roof'), ...treeAt(-.7 * h, .6 * h, .7), ...treeAt(.72 * h, .55 * h, .65), ...treeAt(.7 * h, -.7 * h, .7));
+    labelY = 1.95;
   }
+  const m = h * 1.07; P.marks = [Lp(rectLoop(-m, -m, m, m, top + .012), 'acc2', 1, 2.4)];
+  P.labelY = labelY;
   return P;
 }
-const TILE_KINDS = ['land', 'villa', 'farm', 'apt', 'land', 'villa', 'farm'];
-function plotPrims(t) {
-  const P = [];
-  for (let i = 0; i < 7; i++) {
-    const a = i / 7 * Math.PI * 2, R = 3.3, tx = Math.cos(a) * R, tz = Math.sin(a) * R, ty = Math.sin(t * .9 + i * 1.3) * .22 + (i % 2 ? .3 : 0);
-    const sp = t * .25 + i, c = Math.cos(sp), s = Math.sin(sp);
-    const T = p => [p[0] * c + p[2] * s + tx, p[1] + ty, -p[0] * s + p[2] * c + tz];
-    const local = cached('tile' + i, () => tileLocal(TILE_KINDS[i], i));
-    for (const q of local) {
-      const nq = { ...q, p: Array.isArray(q.p[0]) ? q.p.map(T) : T(q.p) };
-      if (q.kids) nq.kids = q.kids.map(kq => ({ ...kq, p: kq.p.map(T) }));
-      P.push(nq);
+const PLS = { items: [], tgt: null, lastUser: 0, lastAuto: 0, t0: 0, lift: [], zoom: 0, cardSel: -1, fresh: true, tags: [], ready: false };
+function plotsPick() {
+  const seen = new Set(), out = [], byCode = c => DATA.find(d => d.code === c);
+  const add = x => { if (x && !seen.has(x.code) && out.length < 7) { seen.add(x.code); out.push(x); } };
+  for (const c of ['villa', 'land', 'farm', 'apt']) add(FEATURED.map(byCode).find(d => d && d.cat === c) || DATA.find(d => d.cat === c));
+  FEATURED.forEach(k => add(byCode(k)));
+  [...DATA].sort((a, b) => (b.total || b.price) - (a.total || a.price)).forEach(add);
+  return out;
+}
+function plotsRebuild() {
+  if (!DATA.length) return;
+  for (const k of Object.keys(SC_CACHE)) if (k.startsWith('ptile:')) delete SC_CACHE[k];
+  PLS.items = plotsPick(); PLS.lift = PLS.items.map(() => 0); PLS.tags = []; PLS.cardSel = -1; PLS.tgt = 0; PLS.fresh = true; PLS.t0 = performance.now(); PLS.lastUser = performance.now();
+  $('pcDots').innerHTML = PLS.items.map(() => '<i></i>').join('');
+}
+function plotsCard(sel) {
+  const x = PLS.items[sel]; if (!x) return; PLS.cardSel = sel;
+  const p = price(x), t = $('pcTitle'); t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
+  $('pcType').textContent = TYPES[x.cat]; $('pcCode').textContent = x.code; t.textContent = x.title;
+  $('pcPrice').textContent = p.main; $('pcMeta').textContent = `${size(x)} · ${x.area}${x.mode === 'dunam' ? ' · السعر للدنم' : ''}`;
+  $('pcWa').href = WA + encodeURIComponent(`مرحباً أستاذ محمد، أستفسر عن العقار ${x.code} — ${x.title}`);
+  [...$('pcDots').children].forEach((d, i) => d.classList.toggle('on', i === sel));
+}
+function plotGo(d) {
+  if (!PLS.items.length) return; const n = PLS.items.length; PLS.lastUser = performance.now();
+  PLS.tgt = (((PLS.tgt != null ? PLS.tgt : PLS.cardSel) + d) % n + n) % n;
+}
+function plotTap(px, py) {
+  if (!PLS.tags.length) return;
+  let best = -1, bd = 1e9;
+  PLS.tags.forEach((g, i) => { if (!g) return; const d = Math.hypot(px - g.sx, py - g.sy); if (d < g.r * 1.25 && d - g.z * 4 < bd) { bd = d - g.z * 4; best = i; } });
+  if (best < 0) return;
+  PLS.lastUser = performance.now();
+  if (best === PLS.cardSel) openSheet(PLS.items[best].code); else PLS.tgt = best;
+}
+function proj(p) {
+  const cyw = Math.cos(S3.yaw), syw = Math.sin(S3.yaw), cp = Math.cos(S3.pitch), sp = Math.sin(S3.pitch);
+  const x = p[0] * cyw + p[2] * syw, z0 = -p[0] * syw + p[2] * cyw, y = p[1] * cp - z0 * sp, z = p[1] * sp + z0 * cp, k = S3.f / Math.max(.3, S3.dist - z);
+  return [S3.cx + x * k, S3.cy - y * k, z, k];
+}
+function pill(x, y, text, big, alpha) {
+  const fs = big ? 15 : 12, h = big ? 32 : 24;
+  ctx.save(); ctx.globalAlpha = alpha; ctx.font = `800 ${fs}px ${FONTS[FONT_KEY].fb}`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const w = ctx.measureText(text).width + (big ? 30 : 20), r = h / 2, x0 = x - w / 2, y0 = y - h / 2;
+  ctx.beginPath(); ctx.moveTo(x0 + r, y0); ctx.arcTo(x0 + w, y0, x0 + w, y0 + h, r); ctx.arcTo(x0 + w, y0 + h, x0, y0 + h, r); ctx.arcTo(x0, y0 + h, x0, y0, r); ctx.arcTo(x0, y0, x0 + w, y0, r); ctx.closePath();
+  ctx.fillStyle = COL('bg', .86); ctx.fill(); ctx.strokeStyle = COL('acc', big ? 1 : .55); ctx.lineWidth = big ? 1.6 : 1; ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x, y0 + h); ctx.lineTo(x, y0 + h + (big ? 12 : 8)); ctx.stroke();
+  ctx.fillStyle = big ? COL('acc2', 1) : COL('ink', .95); ctx.fillText(text, x, y + 1); ctx.restore();
+}
+const ringPts = (r, y, cx = 0, cz = 0, n = 48) => { const o = []; for (let i = 0; i <= n; i++) { const a = i / n * Math.PI * 2; o.push([cx + Math.cos(a) * r, y, cz + Math.sin(a) * r]); } return o; };
+const wrapPi = d => ((d + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+const eoC = x => 1 - Math.pow(1 - x, 3);
+function drawPlots(now) {
+  paintBg();
+  if (!PLS.items.length) { if (window.READY) plotsRebuild(); if (!PLS.items.length) return; }
+  const n = PLS.items.length, step = Math.PI * 2 / n, t = sceneT(now), tt = (now - PLS.t0) / 1000, R = 3.9, GY = -2.5;
+  const front = yaw => ((Math.round((yaw + Math.PI / 2) / step) % n) + n) % n;
+  if (PLS.fresh) { S3.yaw = -Math.PI / 2; S3.vyaw = 0; PLS.fresh = false; }
+  let settled = false;
+  if (!S3.drag) {
+    S3.yaw += S3.vyaw * DT; S3.vyaw *= Math.pow(.93, DT);
+    if (Math.abs(S3.vyaw) < .006) {
+      if (PLS.tgt == null) PLS.tgt = front(S3.yaw);
+      const base = PLS.tgt * step - Math.PI / 2, goal = base + Math.PI * 2 * Math.round((S3.yaw - base) / (Math.PI * 2));
+      S3.yaw += (goal - S3.yaw) * (1 - Math.pow(.88, DT)); settled = Math.abs(goal - S3.yaw) < .03;
     }
-    P.push(Lp([[tx, ty - .1, tz], [tx * .55, -1.6, tz * .55]], 'acc', .16, 1, 0, 1));
+  } else PLS.tgt = null;
+  const sel = front(S3.yaw);
+  if (!S3.drag && settled && now - PLS.lastUser > 5200 && now - PLS.lastAuto > 4300) { PLS.lastAuto = now; PLS.tgt = (sel + 1) % n; }   // gentle auto tour while nobody touches it
+  PLS.zoom += ((settled ? 1 : 0) - PLS.zoom) * (1 - Math.pow(.92, DT));
+  if (sel !== PLS.cardSel) plotsCard(sel);
+  cam(13.8 - 2.6 * PLS.zoom, 1.2, .52, .43 - .05 * PLS.zoom + STEER.y * .05);
+
+  const P = [], ph = (t * .6) % 1;
+  P.push(Lp(ringPts(R, GY), 'acc', .3, 1.2, 0, 1), Lp(ringPts(R * .5, GY), 'acc', .16, 1, 0), Lp(ringPts(R * 1.3, GY), 'ink', .1, 1, 0, 1));
+  const tagged = [];
+  for (let i = 0; i < n; i++) {
+    const x = PLS.items[i], a = i * step, tx = Math.cos(a) * R, tz = Math.sin(a) * R;
+    const en = eoC(Math.max(0, Math.min(1, (tt - i * .11) / 1.1)));
+    PLS.lift[i] += ((i === sel ? 1 : 0) - PLS.lift[i]) * (1 - Math.pow(.9, DT));
+    const L = PLS.lift[i], ty = Math.sin(t * .9 + i * 1.3) * .18 + .25 + L * .5 - (1 - en) * 6.5, sc = 1 + L * .1;
+    const free = t * .2 + i * 1.7, sp = free + wrapPi(-S3.yaw - free) * L, c = Math.cos(sp), s = Math.sin(sp);
+    const T = p => { const px = p[0] * sc, pz = p[2] * sc; return [px * c + pz * s + tx, p[1] * sc + ty, -px * s + pz * c + tz]; };
+    const xf = q => { const nq = { ...q, p: q.k === 'd' ? T(q.p) : q.p.map(T) }; if (q.kids) nq.kids = q.kids.map(kq => ({ ...kq, p: kq.p.map(T) })); P.push(nq); };
+    const loc = cached('ptile:' + x.code, () => tileLocal(x, i));
+    for (const q of loc) xf(q);
+    if (i === sel) for (const q of loc.marks) xf(q);
+    P.push(Lp(ringPts(.95 * sc, GY, tx, tz, 28), 'ink', .2 + .1 * L, 1, 0), Lp([[tx, ty - 1.2 * sc, tz], [tx, GY, tz]], 'acc2', .08 + .3 * L, 1, 0));
+    if (i === sel) P.push(Lp(ringPts(1 + ph * 1.1, GY, tx, tz, 32), 'acc2', (1 - ph) * .85, 1.6, 0));
+    tagged.push({ i, pos: [tx, ty + (loc.labelY + .2) * sc, tz], ctr: [tx, ty + .4 * sc, tz], sc, en });
   }
-  const ring = []; for (let i = 0; i <= 64; i++) { const a = i / 64 * Math.PI * 2; ring.push([Math.cos(a) * 3.3, -1.6, Math.sin(a) * 3.3]); }
-  P.push(Lp(ring, 'acc', .3, 1.2, 0, 1), Lp(ring.map(p => [p[0] * .55, p[1], p[2] * .55]), 'acc', .2, 1, 0));
-  return P;
+  for (let j = 0; j < 38; j++) {   // floating dust
+    const u = Math.sin(j * 91.7) * .5 + .5, v = Math.sin(j * 47.3 + 1) * .5 + .5, w = Math.sin(j * 12.9 + 2) * .5 + .5, rr = 1.6 + u * 4.4, aa = v * 6.283 + t * .06;
+    P.push(Dp([Math.cos(aa) * rr, -1.6 + w * 4.2 + Math.sin(t * .5 + j) * .15, Math.sin(aa) * rr], 1.1 + u, 'acc2', .25 + .3 * v));
+  }
+  draw3d(P);
+
+  PLS.tags = [];
+  const tg = tagged.map(g => ({ ...g, pr: proj(g.pos), pc: proj(g.ctr) })).sort((A, B) => A.pr[2] - B.pr[2]);
+  for (const g of tg) {
+    const x = PLS.items[g.i], isSel = g.i === sel, dep = Math.max(0, Math.min(1, (g.pr[2] + R) / (2 * R)));
+    PLS.tags[g.i] = { sx: g.pc[0], sy: g.pc[1], r: 1.15 * g.sc * g.pc[3], z: g.pc[2] };
+    const p = price(x), txt = p.main + (x.mode === 'dunam' ? ' / دنم' : '');
+    pill(g.pr[0], g.pr[1], txt, isSel, Math.min(1, g.en) * (isSel ? 1 : .35 + .55 * dep));
+  }
 }
 
 /* ---- 6. olive grove flight ---- */
@@ -854,8 +1005,7 @@ var SCENES = {
       draw3d([...G, ...dyn], { dimBack: G.R });
     } },
   tunnel: { name: 'بوابات', note: 'ممرّ يجذبك للداخل', hint: 'حرّك إصبعك لتوجيه الممر', icon: '<rect x="3" y="3" width="18" height="18"/><rect x="7" y="7" width="10" height="10"/><rect x="10" y="10" width="4" height="4"/>', draw: now => drawTunnel(now) },
-  plots: { name: 'قطع أراضٍ عائمة', note: 'أرض · فيلا · مزرعة · شقة', hint: 'اسحب لتدوير القطع', icon: '<path d="M12 3l7 4-7 4-7-4zM5 12l7 4 7-4M5 17l7 4 7-4"/>',
-    draw(now) { paintBg(); stepYaw(.0035); cam(12.8, 1.4, .64, .44 + STEER.y * .05); draw3d(plotPrims(sceneT(now))); } },
+  plots: { name: 'قطع أراضٍ عائمة', note: 'عقاراتك الحقيقية · اسحب واختر', hint: 'اسحب للتنقل بين العقارات · المس قطعة لاختيارها', icon: '<path d="M12 3l7 4-7 4-7-4zM5 12l7 4 7-4M5 17l7 4 7-4"/>', draw: now => drawPlots(now) },
   grove: { name: 'بستان زيتون', note: 'طيران فوق الأشجار', hint: 'حرّك إصبعك لتوجيه الطريق', icon: '<path d="M12 21v-6M12 3l5 7h-3l4 6H6l4-6H7z"/>',
     draw(now) { paintBg(); S3.yaw = STEER.x * .42; cam(8.4, 1.25, .7, .17 + STEER.y * .05); draw3d(grovePrims(sceneT(now)), { fog: [4, 21] }); } }
 };
@@ -863,6 +1013,9 @@ var SCENE_KEY = 'terrain';
 function applyScene(key, save = true) {
   if (!SCENES[key]) key = 'terrain';
   SCENE_KEY = key; SCENE_T0 = performance.now(); S3.vyaw = 0; staticDirty = true;
+  document.getElementById('hero').classList.toggle('plots-on', key === 'plots');
+  document.getElementById('hero').classList.toggle('side3d', ['villa', 'district', 'globe', 'plots'].includes(key));
+  if (key === 'plots') { PLS.fresh = true; PLS.t0 = performance.now(); PLS.lastUser = performance.now(); PLS.tgt = 0; PLS.zoom = 0; }
   S3.yaw = key === 'globe' ? -36.29 * Math.PI / 180 : key === 'villa' ? .7 : key === 'district' ? .8 : 0;
   const h = document.getElementById('thint'); h.innerHTML = '<i></i>' + SCENES[key].hint; h.style.opacity = 1;
   clearTimeout(applyScene.tm); applyScene.tm = setTimeout(() => { h.style.opacity = 0; }, 6500);
@@ -992,7 +1145,7 @@ function openSheet(code, push = true) {
     <div class="sh-actions"><a class="wa" href="${WA + encodeURIComponent(`مرحباً أستاذ محمد، أستفسر عن العقار ${x.code} — ${x.title}`)}">استفسر على واتساب</a><a class="more" href="../listing/${x.code}.html">التفاصيل الكاملة</a></div>
     ${navigator.share ? `<button class="sh-share" id="shShare">مشاركة العقار</button>` : ''}`;
   const sh = $('shShare'); if (sh) sh.onclick = () => navigator.share({ title: x.title, text: `${x.title} — ${p.main}`, url }).catch(() => {});
-  sheetBody.scrollTop = 0; sheet.style.transform = '';
+  sheetBody.scrollTop = 0; sheet.style.transform = ''; sheetOpenedAt = performance.now();
   sheet.classList.add('on'); sheetBg.classList.add('on'); document.documentElement.classList.add('lock');
   if (push) history.pushState({ sheet: code }, '', `#${x.code}`);
   return true;
@@ -1006,7 +1159,8 @@ function closeSheet(fromHistory = false) {
 }
 addEventListener('popstate', e => { if (e.state && e.state.sheet) openSheet(e.state.sheet, false); else closeSheet(true); });
 addEventListener('keydown', e => { if (e.key === 'Escape') closeSheet(); });
-sheetBg.addEventListener('click', () => closeSheet());
+let sheetOpenedAt = 0;   // the click a tap synthesizes after pointerup must not hit the backdrop that just appeared
+sheetBg.addEventListener('click', () => { if (performance.now() - sheetOpenedAt > 450) closeSheet(); });
 document.addEventListener('click', e => {
   const a = e.target.closest('.row'); if (!a || e.metaKey || e.ctrlKey || e.shiftKey || e.button) return;
   if (openSheet(a.dataset.code)) e.preventDefault();
@@ -1040,6 +1194,12 @@ const spot = $('spot');
 addEventListener('pointermove', e => { spot.style.setProperty('--sx', e.clientX + 'px'); spot.style.setProperty('--sy', e.clientY + 'px'); spot.style.setProperty('--so', 1); });
 addEventListener('pointerdown', e => { spot.style.setProperty('--sx', e.clientX + 'px'); spot.style.setProperty('--sy', e.clientY + 'px'); spot.style.setProperty('--so', 1); });
 addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') setTimeout(() => spot.style.setProperty('--so', 0), 300); });
+
+/* ================= floating-parcels card ================= */
+$('pcard').addEventListener('pointerdown', e => e.stopPropagation());
+$('pcPrev').onclick = () => plotGo(-1); $('pcNext').onclick = () => plotGo(1);
+$('pcMore').onclick = () => { const x = PLS.items[PLS.cardSel]; if (x) openSheet(x.code); };
+$('pcWa').addEventListener('click', () => { PLS.lastUser = performance.now(); });
 
 /* ================= palette switcher ================= */
 $('palBtn').onclick = () => { const o = $('pal').classList.toggle('open'); $('palBtn').setAttribute('aria-expanded', o); if (o) loadFontSamples(); };
@@ -1096,6 +1256,7 @@ fetch('../data.json', { cache: 'no-cache' }).then(r => r.json()).then(d => {
   $('stMax').dataset.count = Math.round(Math.max(...DATA.map(x => x.area_m2 || 0)) / 1000);
   for (const a of document.querySelectorAll('[data-wa]')) a.href = WA + encodeURIComponent('مرحباً أستاذ محمد، وصلتك من الموقع');
   renderDeck(); renderChips(); renderIndex();
+  if (SCENE_KEY === 'plots') plotsRebuild();
   if (/^#MK-\d+$/.test(location.hash)) { history.replaceState(null, '', location.pathname); openSheet(location.hash.slice(1)); }
   window.READY = true;
 }).catch(() => { $('index').innerHTML = '<p class="lead">تعذّر تحميل العقارات. <a class="gtext" href="../index.html">افتح الصفحة الرئيسية</a></p>'; window.READY = true; });
