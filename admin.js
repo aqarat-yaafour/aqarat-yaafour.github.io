@@ -547,17 +547,17 @@ function glowBlob(ctx, cx, cy, r, color, alpha) {
 function glassPanel(ctx, x, y, w, h, r, strength) {
   ctx.save();
   ctx.shadowColor = "rgba(0,0,0,.5)"; ctx.shadowBlur = 44; ctx.shadowOffsetY = 16;
-  ctx.fillStyle = `rgba(28,24,14,${.35 + strength * .4})`; rrect(ctx, x, y, w, h, r); ctx.fill();
+  ctx.fillStyle = `rgba(4,30,22,${.35 + strength * .4})`; rrect(ctx, x, y, w, h, r); ctx.fill();
   ctx.restore();
-  ctx.fillStyle = `rgba(212,175,55,${strength * .55})`; rrect(ctx, x, y, w, h, r); ctx.fill();
+  ctx.fillStyle = `rgba(230,184,76,${strength * .55})`; rrect(ctx, x, y, w, h, r); ctx.fill();
   const sheen = ctx.createLinearGradient(x, y, x, y + h);
-  sheen.addColorStop(0, "rgba(252,246,186,.16)"); sheen.addColorStop(.4, "rgba(252,246,186,0)");
+  sheen.addColorStop(0, "rgba(247,211,122,.16)"); sheen.addColorStop(.4, "rgba(247,211,122,0)");
   ctx.fillStyle = sheen; rrect(ctx, x, y, w, h, r); ctx.fill();
-  ctx.strokeStyle = "rgba(252,246,186,.42)"; ctx.lineWidth = 2.5; rrect(ctx, x, y, w, h, r); ctx.stroke();
+  ctx.strokeStyle = "rgba(247,211,122,.42)"; ctx.lineWidth = 2.5; rrect(ctx, x, y, w, h, r); ctx.stroke();
 }
 function metalGrad(ctx, x0, y0, x1, y1) {
   const g = ctx.createLinearGradient(x0, y0, x1, y1);
-  [[0, "#AA771C"], [.18, "#D4AF37"], [.38, "#FCF6BA"], [.55, "#C9A13B"], [.72, "#F5E7A1"], [1, "#B38728"]]
+  [[0, "#e6b84c"], [.5, "#f7d37a"], [1, "#e6b84c"]]
     .forEach(([o, c]) => g.addColorStop(o, c));
   return g;
 }
@@ -611,26 +611,26 @@ function postCaption(x) {
 
 async function drawPostCard(x) {
   try {
-    await Promise.all(['700 84px "Amiri"', '800 40px "Tajawal"', '700 34px "Tajawal"', '500 32px "Tajawal"']
+    await Promise.all(['400 84px \"Lalezar\"', '800 40px \"Cairo\"', '700 34px \"Cairo\"', '500 32px \"Cairo\"']
       .map(f => document.fonts.load(f)));
   } catch (e) { }
   const av = await loadAvatar();
   const c = $("cardCv"), ctx = c.getContext("2d"), W = 1080, H = 1080;
-  const INK = "#F3EDE1", INK2 = "#CFC3A3", GOLD = "#D4AF37", GOLD_L = "#F5D77A", BLACK = "#0B0B0C";
+  const INK = "#f3ecd9", INK2 = "#d2cab2", GOLD = "#e6b84c", GOLD_L = "#f7d37a", BLACK = "#06231b";
   const [n, u] = sizeOf(x), [main, unit2] = priceTxt(x);
   const ask = x.confirmed === false;
 
   ctx.fillStyle = BLACK; ctx.fillRect(0, 0, W, H);
-  glowBlob(ctx, 930, 120, 560, "#D4AF37", .7);
-  glowBlob(ctx, 120, 980, 560, "#B38728", .6);
-  glowBlob(ctx, 420, 520, 300, "#FCF6BA", .14);
+  glowBlob(ctx, 930, 120, 560, "#14775a", .75);
+  glowBlob(ctx, 120, 980, 560, "#0f5a44", .8);
+  glowBlob(ctx, 420, 520, 300, "#f7d37a", .1);
 
   ctx.direction = "rtl"; ctx.textAlign = "center";
-  ctx.font = '800 32px "Tajawal"';
+  ctx.font = '800 32px \"Cairo\"';
   const pillTxt = `للبيع · ${x.cat}`, pillW = ctx.measureText(pillTxt).width + 64;
   glassPanel(ctx, W - 48 - pillW, 44, pillW, 68, 34, .42);
   ctx.fillStyle = GOLD_L; ctx.fillText(pillTxt, W - 48 - pillW / 2, 89);
-  ctx.direction = "ltr"; ctx.font = '800 26px "Tajawal"';
+  ctx.direction = "ltr"; ctx.font = '800 26px \"Cairo\"';
   const codeW = ctx.measureText(x.code).width + 56;
   glassPanel(ctx, 48, 44, codeW, 68, 34, .42);
   ctx.fillStyle = INK; ctx.fillText(x.code, 48 + codeW / 2, 87);
@@ -638,11 +638,11 @@ async function drawPostCard(x) {
   const mx = 48, my = 138, mw = W - 96, mh = 690;
   glassPanel(ctx, mx, my, mw, mh, 56, .26);
   ctx.direction = "rtl"; ctx.textAlign = "center";
-  ctx.fillStyle = GOLD; ctx.font = '800 34px "Tajawal"'; ctx.fillText(x.area, W / 2, my + 70);
+  ctx.fillStyle = GOLD; ctx.font = '800 34px \"Cairo\"'; ctx.fillText(x.area, W / 2, my + 70);
 
-  ctx.fillStyle = metalGrad(ctx, 140, my + 90, 940, my + 260); ctx.font = '700 84px "Amiri"';
+  ctx.fillStyle = metalGrad(ctx, 140, my + 90, 940, my + 260); ctx.font = '400 84px \"Lalezar\"';
   let tl = wrapText(ctx, x.title, 860), lh = 92;
-  if (tl.length > 1) { ctx.font = '700 68px "Amiri"'; tl = wrapText(ctx, x.title, 900); lh = 80; }
+  if (tl.length > 1) { ctx.font = '400 68px \"Lalezar\"'; tl = wrapText(ctx, x.title, 900); lh = 80; }
   tl = tl.slice(0, 2);
   const ty = my + 162;
   tl.forEach((l, i) => ctx.fillText(l, W / 2, ty + i * lh));
@@ -663,26 +663,26 @@ async function drawPostCard(x) {
       const s = Math.max(pw / im.width, pH / im.height);
       ctx.drawImage(im, px + (pw - im.width * s) / 2, py + (pH - im.height * s) / 2, im.width * s, im.height * s);
       ctx.restore();
-      ctx.strokeStyle = "rgba(252,246,186,.42)"; ctx.lineWidth = 2.5;
+      ctx.strokeStyle = "rgba(247,211,122,.42)"; ctx.lineWidth = 2.5;
       rrect(ctx, px, py, pw, pH, 36); ctx.stroke();
       drew = true;
     }
   }
   if (!drew) {
     glassPanel(ctx, px, py, pw, pH, 36, .34);
-    ctx.fillStyle = INK; ctx.font = `700 ${tl.length > 1 ? 100 : 120}px "Amiri"`;
+    ctx.fillStyle = INK; ctx.font = `400 ${tl.length > 1 ? 100 : 120}px "Lalezar"`;
     ctx.fillText(String(n), W / 2, py + pH * 0.57);
-    ctx.fillStyle = INK2; ctx.font = '800 34px "Tajawal"'; ctx.fillText(u, W / 2, py + pH - 22);
+    ctx.fillStyle = INK2; ctx.font = '800 34px \"Cairo\"'; ctx.fillText(u, W / 2, py + pH - 22);
   }
 
   const yp = py + pH + 90;
-  if (ask) { ctx.fillStyle = INK; ctx.font = '800 54px "Tajawal"'; ctx.fillText("السعر عند التواصل", W / 2, yp); }
+  if (ask) { ctx.fillStyle = INK; ctx.font = '800 54px \"Cairo\"'; ctx.fillText("السعر عند التواصل", W / 2, yp); }
   else {
-    ctx.fillStyle = GOLD_L; ctx.font = '700 76px "Amiri"';
+    ctx.fillStyle = GOLD_L; ctx.font = '400 76px \"Lalezar\"';
     const label = unit2 === "للدنم" ? `${main} للدنم` : main;
     ctx.fillText(label + (x.nego ? " · قابل للتفاوض" : ""), W / 2, yp);
   }
-  ctx.fillStyle = INK2; ctx.font = '500 31px "Tajawal"';
+  ctx.fillStyle = INK2; ctx.font = '500 31px \"Cairo\"';
   const extra = (x.photos || []).length && drew ? [String(n) + " " + u].concat(x.feats || []) : (x.feats || []);
   const fl = fitLine(ctx, extra.slice(0, 4).join(" · "), 840);
   if (fl) ctx.fillText(fl, W / 2, Math.min(yp + 56, my + mh - 26));
@@ -696,14 +696,14 @@ async function drawPostCard(x) {
   ctx.restore();
   ctx.strokeStyle = GOLD; ctx.lineWidth = 5; ctx.beginPath(); ctx.arc(pcx, pcy, 60, 0, Math.PI * 2); ctx.stroke();
   ctx.textAlign = "right"; ctx.direction = "rtl";
-  ctx.fillStyle = GOLD_L; ctx.font = '700 54px "Amiri"'; ctx.fillText(NAME, R - 140, fy + 84);
-  ctx.fillStyle = INK2; ctx.font = '500 28px "Tajawal"'; ctx.fillText(ROLE, R - 140, fy + 128);
-  ctx.direction = "ltr"; ctx.font = '800 44px "Tajawal"';
+  ctx.fillStyle = GOLD_L; ctx.font = '400 54px \"Lalezar\"'; ctx.fillText(NAME, R - 140, fy + 84);
+  ctx.fillStyle = INK2; ctx.font = '500 28px \"Cairo\"'; ctx.fillText(ROLE, R - 140, fy + 128);
+  ctx.direction = "ltr"; ctx.font = '800 44px \"Cairo\"';
   const tel = PHONE_LOCAL, telW = ctx.measureText(tel).width + 70;
   ctx.fillStyle = metalGrad(ctx, fx + 30, fy + 34, fx + 30 + telW, fy + 110);
   rrect(ctx, fx + 30, fy + 34, telW, 76, 38); ctx.fill();
-  ctx.textAlign = "center"; ctx.fillStyle = BLACK; ctx.fillText(tel, fx + 30 + telW / 2, fy + 88);
-  ctx.direction = "rtl"; ctx.fillStyle = INK2; ctx.font = '500 24px "Tajawal"';
+  ctx.textAlign = "center"; ctx.fillStyle = "#1c1403"; ctx.fillText(tel, fx + 30 + telW / 2, fy + 88);
+  ctx.direction = "rtl"; ctx.fillStyle = INK2; ctx.font = '500 24px \"Cairo\"';
   ctx.fillText("واتساب · اذكر الكود " + x.code, fx + 30 + telW / 2, fy + 146);
 
   return new Promise(res => c.toBlob(b => res(b), "image/png"));
@@ -898,6 +898,8 @@ function render() {
     b.type = "button"; b.className = "card-open";
     b.addEventListener("click", () => openForm(r));
     card.appendChild(b);
+    const acts = document.createElement("div"); acts.className = "card-acts";
+    card.appendChild(acts);
 
     const cam = document.createElement("button");
     cam.type = "button"; cam.className = "card-cam";
@@ -905,21 +907,21 @@ function render() {
     cam.textContent = "📷 " + (np ? np : "صور");
     cam.setAttribute("aria-label", "صور " + r.code);
     cam.addEventListener("click", ev => { ev.stopPropagation(); openPhotos(r); });
-    card.appendChild(cam);
+    acts.appendChild(cam);
 
     const pc = document.createElement("button");
     pc.type = "button"; pc.className = "card-post";
     pc.textContent = "🖼 بطاقة";
     pc.setAttribute("aria-label", "بطاقة منشور " + r.code);
     pc.addEventListener("click", ev => { ev.stopPropagation(); openPost(r); });
-    card.appendChild(pc);
+    acts.appendChild(pc);
 
     const gl = document.createElement("button");
     gl.type = "button"; gl.className = "card-gal";
     gl.textContent = "🔗 رابط";
     gl.setAttribute("aria-label", "الرابط الخاص لصور " + r.code);
     gl.addEventListener("click", ev => { ev.stopPropagation(); openGallery(r); });
-    card.appendChild(gl);
+    acts.appendChild(gl);
 
     const row = document.createElement("div"); row.className = "row1";
     const code = document.createElement("span"); code.className = "code"; code.textContent = r.code;
