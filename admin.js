@@ -115,16 +115,25 @@ async function commit(repo, files, message, deletes) {
   return c.sha;
 }
 
-/* ===== مولّد الموقع (منقول حرفياً عن build_site.py) ===== */
+/* ===== مولّد الموقع — التصميم الجديد (زمرّد ملكي + خط جريء عريض) =====
+   كل صفحة هنا HTML كامل جاهز لمحركات البحث، ثم يحسّنه assets/mk.css و assets/mk.js
+   (وهما ملفان ثابتان في المستودع لا تلمسهما لوحة الإدارة). */
+const ASSET_V = "1";   /* ارفع الرقم عند تعديل mk.css أو mk.js ليُحمَّل الجديد عند الزوار */
+const jsonInline = v => JSON.stringify(v).replace(/</g, "\\u003c");   /* آمن داخل <script> */
+const WA_SVG = '<svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3zm5.8 15.7c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1a8.7 8.7 0 0 1-4.3-3.8c-.3-.6.3-.5.9-1.7a.6.6 0 0 0 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4 3.6 3.6 0 0 0-1.1 2.7 6.3 6.3 0 0 0 1.3 3.3 14.4 14.4 0 0 0 5.5 4.9c2 .9 2.8.9 3.8.8a3.3 3.3 0 0 0 2.1-1.5 2.7 2.7 0 0 0 .2-1.5c-.1-.2-.3-.3-.6-.4z"/></svg>';
+const TEL_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>';
+const CHEV_R = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6-6 6"/></svg>';
+const CHEV_L = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
+
 /* صورة المعاينة عند مشاركة الرابط على واتساب وفيسبوك */
 function ogImage(x) {
   return BASE + "/img/mohammad-khaled.jpg";
 }
-function headHtml(title, desc, canonical, jsonld, extra, image) {
+function headHtml(title, desc, canonical, jsonld, extra, image, bodyCls) {
   const up = canonical.indexOf("/listing/") >= 0 ? "../" : "";
   const og = image || ogImage(null);
   return `<!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="solid">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -145,51 +154,42 @@ function headHtml(title, desc, canonical, jsonld, extra, image) {
 <link rel="icon" href="${BASE}/favicon.ico" sizes="32x32">
 <link rel="apple-touch-icon" href="${BASE}/apple-touch-icon.png">
 <link rel="manifest" href="${BASE}/site.webmanifest">
-<meta name="theme-color" content="#0B0B0C">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700;800&display=swap">
-<link rel="stylesheet" href="${up}style.css">
+<meta name="theme-color" content="#06231b">
+<link rel="preload" href="${BASE}/assets/fonts/lalezar-arabic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="${BASE}/assets/fonts/cairo-arabic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="${BASE}/assets/mk.css?v=${ASSET_V}">
 <script type="application/ld+json">${JSON.stringify(jsonld)}<\/script>
 ${extra || ""}
 </head>
-<body>
+<body class="${bodyCls || ""}" data-up="${up}" data-phone="${PHONE_INTL}">
 `;
 }
-const NAV = up => `<header class="topbar">
-  <a class="brand" href="${up}index.html"><img src="${up}img/mohammad-khaled.jpg" width="44" height="44" alt="${NAME}"><span><b>${NAME}</b><small>${ROLE}</small></span></a>
-  <nav><a href="${up}index.html">العقارات</a><a href="${up}index.html#about">من أنا</a><a class="wa" href="${wa("مرحباً أستاذ محمد، أرغب بالاستفسار عن عقار.")}" target="_blank" rel="noopener">واتساب</a></nav>
+const NAV = up => `<header class="nav">
+  <a class="brand" href="${up}index.html"><img src="${up}img/mohammad-khaled.jpg" width="40" height="40" alt="${NAME}"><span><b>${NAME}</b><small>${ROLE}</small></span></a>
+  <a class="wa" href="${wa("مرحباً أستاذ محمد، أرغب بالاستفسار عن عقار.")}" target="_blank" rel="noopener">واتساب</a>
 </header>
 `;
 const FOOT = () => `<footer class="site">
   <div><b>${NAME}</b> · ${ROLE} · يعفور وقرى الشام، ريف دمشق</div>
   <div>واتساب: <a href="tel:+${PHONE_INTL}" dir="ltr">${PHONE_LOCAL}</a></div>
-  <div class="fine">الأسعار والتوفر قابلة للتغيير. الأوراق تُعرض كاملة قبل أي عربون.</div>
+  <div>الأسعار والتوفر قابلة للتغيير. الأوراق تُعرض كاملة قبل أي عربون.</div>
 </footer>
+<nav class="dock"><a class="wa" href="${wa("مرحباً أستاذ محمد، أرغب بالاستفسار عن عقار.")}" target="_blank" rel="noopener">${WA_SVG}تواصل على واتساب</a><a class="call" href="tel:+${PHONE_INTL}" aria-label="اتصال">${TEL_SVG}</a></nav>
+<script src="${BASE}/assets/mk.js?v=${ASSET_V}" defer><\/script>
 </body></html>
 `;
-/* الموقع العام لا يعرض صور العقارات إطلاقاً (حماية من كشف الموقع).
-   تُرسل الصور برابط خاص للمشتري الجدّي — انظر مكتبة الصور أدناه. */
-function mediaHtml(x, up, big) {
-  const [n, u] = sizeOf(x);
-  const note = big ? '<span class="soon">الصور تُرسل عند التواصل</span>' : "";
-  return `<div class="media${big ? " big" : ""}"><span class="num">${n}</span><span class="unit">${u}</span>${note}</div>`;
+/* سطر عقار في القوائم (الرئيسية، صفحات التصفّح، المشابهة) */
+function rowHtml(x, i, up) {
+  const [main, unit2, total] = priceTxt(x), [n, u] = sizeOf(x), sz = u ? n + " " + u : "";
+  return `<a class="row rv" href="${up}listing/${x.code}.html" data-cat="${CAT_EN[x.cat]}" data-area="${esc(x.area)}" data-total="${total ? Math.round(total) : 0}">
+  <span class="n">${String(i + 1).padStart(2, "0")}</span>
+  <div><h3 class="t">${esc(x.title)}</h3><div class="m">${x.cat} · ${esc(x.area)}${sz ? " · " + sz : ""} · <span class="ltr">${x.code}</span></div></div>
+  <div class="p">${main}${unit2 ? `<small>${unit2}</small>` : ""}</div>
+  <div class="thumb"><div class="cover" data-cat="${CAT_EN[x.cat]}" data-size="${esc(sz)}" data-seed="${i + 11}"></div></div>
+</a>`;
 }
-function cardHtml(x, up) {
-  up = up || "";
-  const [main, unit2, total] = priceTxt(x);
-  return `<article class="card glass" data-cat="${CAT_EN[x.cat]}" data-area="${esc(x.area)}" data-total="${total ? Math.round(total) : 0}">
-  <a class="cardlink" href="${up}listing/${x.code}.html">
-    <div class="shot">${mediaHtml(x, up, false)}<span class="badge">للبيع</span><span class="code">${x.code}</span></div>
-    <div class="body">
-      <h3>${esc(x.title)}</h3>
-      <p class="where"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS.pin}</svg>${esc(x.area)} · ريف دمشق</p>
-      <div class="specrow">${specRow(x)}</div>
-      <div class="pricebar"><span class="main">${main}</span>${unit2 ? `<span class="u">${unit2}</span>` : ""}<span class="ar">←</span></div>
-    </div>
-  </a>
-</article>`;
-}
+const newestFirst = (a, b) => b.code.localeCompare(a.code);
+
 function listingPage(x, live) {
   const [n, u] = sizeOf(x), [main, unit2, total] = priceTxt(x);
   const title = `${x.cat} للبيع في ${x.area} - ${n} ${u} | ${NAME} مستشار عقاري`;
@@ -215,37 +215,40 @@ function listingPage(x, live) {
       { "@type": "ListItem", position: 3, name: x.title, item: canonical }]
   };
   const extra = `<script type="application/ld+json">${JSON.stringify(crumbs)}<\/script>`;
-  const rel = live.filter(y => y.cat === x.cat && y.code !== x.code).slice(0, 3);
+  const rel = live.filter(y => y.cat === x.cat && y.code !== x.code).sort(newestFirst).slice(0, 3);
+  const specs = [["النوع", x.cat], ["المنطقة", x.area + " · ريف دمشق"], ["المساحة", n + " " + u]];
+  if (x.bua) specs.push(["مساحة البناء", x.bua + " م²"]);
+  if (x.papers) specs.push(["نوع الأوراق", esc(x.papers)]);
+  specs.push(["كود العقار", `<span class="ltr">${x.code}</span>`]);
   const body = `${NAV("../")}
-<main class="wrap">
-  <nav class="crumbs"><a href="../index.html">العقارات</a> <span>›</span> <a href="../${areaPage}">عقارات ${esc(x.area)}</a> <span>›</span> ${esc(x.title)}</nav>
-  <article class="detail glass">
-    <div class="top"><span class="badge">للبيع · ${x.cat}</span><span class="code">${x.code}</span></div>
-    <h1>${esc(x.title)} في ${esc(x.area)}</h1>
-    ${mediaHtml(x, "../", true)}
-    <div class="price big"><span class="main">${main}</span>${unit2 ? `<span class="u">${unit2}</span>` : ""}${x.nego ? ' <span class="nego">قابل للتفاوض</span>' : ""}</div>
-    <table class="specs">
-      <tr><th>النوع</th><td>${x.cat}</td></tr>
-      <tr><th>المنطقة</th><td>${esc(x.area)} · ريف دمشق</td></tr>
-      <tr><th>المساحة</th><td>${n} ${u}</td></tr>
-      ${x.bua ? `<tr><th>مساحة البناء</th><td>${x.bua} م²</td></tr>` : ""}
-      ${x.papers ? `<tr><th>نوع الأوراق</th><td>${esc(x.papers)}</td></tr>` : ""}
-      <tr><th>كود العقار</th><td dir="ltr">${x.code}</td></tr>
-    </table>
-    ${(x.feats || []).length ? `<ul class="feats big">${x.feats.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
-    ${x.note ? `<p class="note">ملاحظة: ${esc(x.note)}</p>` : ""}
-    <p class="lead">للمعاينة أو لطلب صور وأوراق هذا العقار، تواصل مع ${NAME}، ${ROLE} في يعفور وقرى الشام، واذكر الكود ${x.code}.</p>
+<main class="lpage">
+  <div class="wrap">
+    <nav class="crumbs"><a href="../index.html">العقارات</a> <span>›</span> <a href="../${areaPage}">عقارات ${esc(x.area)}</a> <span>›</span> <span>${esc(x.title)}</span></nav>
+    <div class="ltop"><span class="lbadge">للبيع · ${x.cat}</span><span class="lcode">${x.code}</span></div>
+    <h1 class="ltitle">${esc(x.title)}<small>${esc(x.area)} · ريف دمشق</small></h1>
+  </div>
+  <div class="stage">
+    <canvas id="tile3d" aria-hidden="true"></canvas>
+    ${u ? `<div class="stage-size">${n}<small>${u}</small></div>` : ""}
+    <div class="stage-hint">اسحب لتدوير العقار</div>
+  </div>
+  <div class="wrap">
+    <div class="lprice"><b>${main}</b>${unit2 ? `<span class="u">${unit2}</span>` : ""}${x.nego ? '<span class="nego">قابل للتفاوض</span>' : ""}</div>
+    <div class="specs">${specs.map(([k, v]) => `<div class="spec"><small>${k}</small><b>${v}</b></div>`).join("")}</div>
+    ${(x.feats || []).length ? `<ul class="feats">${x.feats.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
+    ${x.note ? `<p class="lnote">ملاحظة: ${esc(x.note)}</p>` : ""}
+    <p class="llead">للمعاينة أو لطلب صور وأوراق هذا العقار، تواصل مع ${NAME}، ${ROLE} في يعفور وقرى الشام، واذكر الكود ${x.code}.</p>
     <div class="actions">
-      <a class="btn btn-primary" target="_blank" rel="noopener" href="${wa(`مرحباً أستاذ محمد، أستفسر عن العقار ${x.code} (${x.title} - ${x.area}).`)}">استفسر على واتساب</a>
+      <a class="btn btn-primary" target="_blank" rel="noopener" href="${wa(`مرحباً أستاذ محمد، أستفسر عن العقار ${x.code} (${x.title} - ${x.area}).`)}">${WA_SVG}استفسر على واتساب</a>
       <a class="btn btn-ghost" href="tel:+${PHONE_INTL}" dir="ltr">${PHONE_LOCAL}</a>
       ${shareHtml(x)}
     </div>
-  </article>
-  ${rel.length ? `<section class="related"><h2>عقارات مشابهة</h2><div class="grid">${rel.map(y => cardHtml(y, "../")).join("")}</div></section>` : ""}
+    ${rel.length ? `<section class="related"><h2>عقارات مشابهة</h2><div class="index" style="padding:0">${rel.map((y, i) => rowHtml(y, i, "../")).join("")}</div></section>` : ""}
+  </div>
 </main>
-${FOOT()}
-<script>${SHARE_JS}<\/script>`;
-  return headHtml(title, desc, canonical, jsonld, extra, ogImage(x)) + body;
+<script type="application/json" id="mk-item">${jsonInline(publicData([x])[0])}<\/script>
+${FOOT()}`;
+  return headHtml(title, desc, canonical, jsonld, extra, ogImage(x), "pg-listing") + body;
 }
 const AREA_ORDER = ["يعفور", "قرى الشام", "الصبورة"];   /* مناطق العقارات المسموحة */
 const AREAS = ["يعفور", "قرى الشام", "الصبورة", "ريف دمشق"];
@@ -265,129 +268,41 @@ const ICONS = {
   tools: '<path d="M21 3 15 9l-1.5-1.5-2 2 6 6 2-2L18 12l6-6-3-3Zm-9.5 8.5-8 8L5 21l8-8-1.5-1.5Z"/><path d="M4 4h5v2H6v3H4V4Z"/>'
 };
 function whyHtml() {
-  return WHY.map(([key, h, t]) =>
-    `<div class="why-card glass">` +
+  return `<div class="why">` + WHY.map(([key, h, t]) =>
+    `<div class="why-card rv">` +
     `<span class="ic"><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">${ICONS[key]}</svg></span>` +
-    `<h3>${h}</h3><p>${t}</p></div>`).join("");
-}
-
-/* العقار المميّز: الأغلى إجمالاً (نفس ترتيب build_site.py) */
-function featured(live) {
-  const ok = live.filter(x => totalOf(x) > 0 && x.confirmed !== false);
-  if (!ok.length) return live[0] || null;
-  return ok.slice().sort((a, b) => (totalOf(b) - totalOf(a)) || a.code.localeCompare(b.code))[0];
-}
-function heroStyle(live) {
-  return "";
+    `<h3>${h}</h3><p>${t}</p></div>`).join("") + `</div>`;
 }
 function specRow(x) {
   const [n, u] = sizeOf(x);
   const items = [["area", u ? n + " " + u : String(n)], ["type", x.cat]];
   if (x.papers) items.push(["doc", x.papers]);
   else if (x.bua) items.push(["build", x.bua + " م² بناء"]);
-  return items.map(([k, v]) =>
-    `<span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS[k]}</svg>${esc(v)}</span>`).join("");
+  return items.map(([k, v]) => `<span>${esc(v)}</span>`).join("");
 }
-function featureHtml(live) {
-  const x = featured(live);
-  if (!x) return "";
-  const [main, unit2] = priceTxt(x);
-  return `<aside class="feature glass">
-      <p class="tag">عقار مميّز</p>
-      <h2>${esc(x.title)}</h2>
-      <p class="where"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS.pin}</svg>${esc(x.area)} · ريف دمشق</p>
-      <div class="specrow">${specRow(x)}</div>
-      <div class="fprice"><span class="main">${main}</span>${unit2 ? `<span class="u">${unit2}</span>` : ""}</div>
-      <a class="flink" href="listing/${x.code}.html">تفاصيل العقار <span class="ar">←</span></a>
-    </aside>`;
-}
-/* نص السكربت مطابق حرفياً لـSEARCH_JS في build_site.py */
-const SEARCH_JS = `
-(function(){
-  var g=document.getElementById('listings-grid');
-  if(!g) return;
-  var cards=Array.prototype.slice.call(g.querySelectorAll('.card'));
-  var fa=document.getElementById('fArea'),fc=document.getElementById('fCat'),
-      fb=document.getElementById('fBudget'),cnt=document.getElementById('rcount'),
-      none=document.getElementById('rnone');
-  function apply(){
-    var a=fa.value,c=fc.value,b=fb.value,lo=0,hi=Infinity,n=0;
-    if(b){var p=b.split('-');lo=+p[0];hi=p[1]?+p[1]:Infinity;}
-    cards.forEach(function(el){
-      var ok=(!a||el.getAttribute('data-area')===a)&&(!c||el.getAttribute('data-cat')===c);
-      if(ok&&b){var t=+el.getAttribute('data-total');ok=t>0&&t>=lo&&t<hi;}
-      el.hidden=!ok; if(ok)n++;
-    });
-    cnt.textContent=n===cards.length?(n+' عقار متاح'):(n+' من '+cards.length+' عقار');
-    none.hidden=n>0;
-  }
-  [fa,fc,fb].forEach(function(s){s.addEventListener('change',apply);});
-  document.getElementById('fGo').addEventListener('click',function(){
-    apply();
-    document.getElementById('listings').scrollIntoView({behavior:'smooth',block:'start'});
-  });
-  apply();
-})();
-`;
+/* الفلاتر (السكربت نفسه في assets/mk.js) */
 function searchHtml(live) {
   const optsArea = AREA_ORDER.filter(a => live.some(x => x.area === a))
     .map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join("");
-  const optsCat = ["land", "villa", "farm", "apt"].map(k => `<option value="${k}">${CAT_AR[k]}</option>`).join("");
+  const optsCat = ["land", "villa", "farm", "apt"].filter(k => live.some(x => CAT_EN[x.cat] === k))
+    .map(k => `<option value="${k}">${CAT_AR[k]}</option>`).join("");
   const budgets = [["", "كل الميزانيات"], ["0-500000", "حتى 500 ألف $"],
     ["500000-1000000", "500 ألف — مليون $"], ["1000000-3000000", "1 — 3 مليون $"],
     ["3000000-", "أكثر من 3 مليون $"]];
   const optsB = budgets.map(([v, t]) => `<option value="${v}">${t}</option>`).join("");
-  return `<form class="search glass" role="search" onsubmit="return false">
-    <div class="sf"><label for="fArea">المنطقة</label>
-      <select id="fArea"><option value="">كل المناطق</option>${optsArea}</select></div>
-    <div class="sf"><label for="fCat">نوع العقار</label>
-      <select id="fCat"><option value="">كل الأنواع</option>${optsCat}</select></div>
-    <div class="sf"><label for="fBudget">الميزانية</label>
-      <select id="fBudget">${optsB}</select></div>
-    <button class="btn btn-primary" type="button" id="fGo">بحث</button>
-  </form>`;
+  return `<div class="filters" role="search">
+    <div class="sel"><select id="fArea" aria-label="المنطقة"><option value="">كل المناطق</option>${optsArea}</select></div>
+    <div class="sel"><select id="fCat" aria-label="نوع العقار"><option value="">كل الأنواع</option>${optsCat}</select></div>
+    <div class="sel"><select id="fBudget" aria-label="الميزانية">${optsB}</select></div>
+  </div>`;
 }
-
-/* ===== زر المشاركة (مطابق لـ SHARE_JS / share_html في build_site.py) ===== */
-const SHARE_JS = `
-(function(){
-  var b=document.getElementById('shareBtn'); if(!b) return;
-  var txt=b.getAttribute('data-txt'), url=location.href;
-  b.addEventListener('click',function(){
-    if(navigator.share){
-      navigator.share({title:document.title,text:txt,url:url}).catch(function(){});
-      return;
-    }
-    window.open('https://wa.me/?text='+encodeURIComponent(txt+'\\n'+url),'_blank','noopener');
-  });
-})();
-`;
 function shareHtml(x) {
   const [n, u] = sizeOf(x), [main, unit2] = priceTxt(x);
   const txt = `${x.title} في ${x.area}\n${n} ${u} · ${main}${unit2 ? " " + unit2 : ""}\nكود ${x.code}`;
   return `<button class="btn btn-ghost" type="button" id="shareBtn" `
     + `data-txt="${esc(txt)}">شارك العقار</button>`;
 }
-
-/* ===== نموذج «دوّرلي على عقار» ===== */
-const REQUEST_JS = `
-(function(){
-  var f=document.getElementById('reqForm'); if(!f) return;
-  var go=document.getElementById('reqGo');
-  function val(id){var e=document.getElementById(id);return e.value;}
-  go.addEventListener('click',function(){
-    var lines=['مرحباً أستاذ محمد، بدوّر على عقار:'];
-    var map=[['reqCat','النوع'],['reqArea','المنطقة'],['reqSize','المساحة'],['reqBudget','الميزانية']];
-    for(var i=0;i<map.length;i++){
-      var v=val(map[i][0]);
-      if(v) lines.push('▪️ '+map[i][1]+': '+v);
-    }
-    var note=val('reqNote').trim();
-    if(note) lines.push('▪️ ملاحظة: '+note);
-    window.open('https://wa.me/963996606813?text='+encodeURIComponent(lines.join('\\n')),'_blank','noopener');
-  });
-})();
-`;
+/* نموذج «دوّرلي على عقار» */
 function requestHtml() {
   const cats = ["أرض", "فيلا", "مزرعة", "شقة"].map(v => `<option value="${v}">${v}</option>`).join("");
   const areas = AREA_ORDER.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join("");
@@ -395,31 +310,22 @@ function requestHtml() {
   const optsSize = sizes.map(v => `<option value="${v}">${v}</option>`).join("");
   const budgets = ["حتى 500 ألف $", "500 ألف — مليون $", "1 — 3 مليون $", "أكثر من 3 مليون $"];
   const optsB = budgets.map(v => `<option value="${v}">${v}</option>`).join("");
-  return `<section class="request glass" id="request">
-    <div>
-      <p class="eyebrow">ما لقيت طلبك؟</p>
-      <h2>دوّرلي على عقار</h2>
-      <p class="lead">حدّد اللي بتدوّر عليه وابعتلي — وإذا إجاني عقار يناسبك بخبّرك أول واحد.</p>
+  return `<section class="req rv" id="request">
+    <p class="kicker">ما لقيت طلبك؟</p>
+    <h2 class="h2">دوّرلي على عقار</h2>
+    <p class="lead">حدّد اللي بتدوّر عليه وابعتلي — وإذا إجاني عقار يناسبك بخبّرك أول واحد.</p>
+    <div class="fields">
+      <div><label for="reqCat">النوع</label><select id="reqCat"><option value="">أي نوع</option>${cats}</select></div>
+      <div><label for="reqArea">المنطقة</label><select id="reqArea"><option value="">أي منطقة</option>${areas}</select></div>
+      <div><label for="reqSize">المساحة</label><select id="reqSize"><option value="">أي مساحة</option>${optsSize}</select></div>
+      <div><label for="reqBudget">الميزانية</label><select id="reqBudget"><option value="">أي ميزانية</option>${optsB}</select></div>
+      <div class="wide"><label for="reqNote">ملاحظة (اختياري)</label><input type="text" id="reqNote" placeholder="مثلاً: قريبة من الأوتوستراد، أو فيها بئر ماء"></div>
     </div>
-    <form id="reqForm" onsubmit="return false">
-      <div class="fields">
-        <div class="sf"><label for="reqCat">النوع</label>
-          <select id="reqCat"><option value="">أي نوع</option>${cats}</select></div>
-        <div class="sf"><label for="reqArea">المنطقة</label>
-          <select id="reqArea"><option value="">أي منطقة</option>${areas}</select></div>
-        <div class="sf"><label for="reqSize">المساحة</label>
-          <select id="reqSize"><option value="">أي مساحة</option>${optsSize}</select></div>
-        <div class="sf"><label for="reqBudget">الميزانية</label>
-          <select id="reqBudget"><option value="">أي ميزانية</option>${optsB}</select></div>
-        <div class="sf wide"><label for="reqNote">ملاحظة (اختياري)</label>
-          <input type="text" id="reqNote" placeholder="مثلاً: قريبة من الأوتوستراد، أو فيها بئر ماء"></div>
-      </div>
-      <button class="btn btn-primary" type="button" id="reqGo">ابعت الطلب على واتساب <span class="ar">←</span></button>
-    </form>
+    <button class="btn btn-primary" type="button" id="reqGo">${WA_SVG}ابعت الطلب على واتساب</button>
   </section>`;
 }
 
-/* ===== صفحات التصفّح (مطابقة لـ collections_all في build_site.py) ===== */
+/* ===== صفحات التصفّح ===== */
 const AREA_SLUG = { "يعفور": "yaafour", "قرى الشام": "qura-alsham", "الصبورة": "sabboura" };
 const CAT_SLUG = { land: "land", villa: "villas", farm: "farms", apt: "apartments" };
 const CAT_PL = { land: "أراضٍ", villa: "فلل", farm: "مزارع", apt: "شقق" };
@@ -491,26 +397,30 @@ function collectionPage(c, cols) {
       { "@type": "ListItem", position: 2, name: c.crumb, item: canonical }]
   };
   const extra = `<script type="application/ld+json">${JSON.stringify(crumbs)}<\/script>`;
+  const sorted = items.slice().sort(newestFirst);
   const body = `${NAV("")}
-<main class="wrap">
-  <nav class="crumbs"><a href="index.html">العقارات</a> <span>›</span> ${esc(c.crumb)}</nav>
-  <div class="sechead">
-    <div>
-      <p class="eyebrow">${esc(c.area)} · ريف دمشق</p>
+<main class="lpage">
+  <div class="wrap">
+    <nav class="crumbs"><a href="index.html">العقارات</a> <span>›</span> <span>${esc(c.crumb)}</span></nav>
+    <div class="chead">
+      <div class="eyebrow"><i></i>${esc(c.area)} · ريف دمشق</div>
       <h1>${esc(c.h1)}</h1>
+      <p class="ccount">${nProp(items.length)}</p>
     </div>
-    <div class="side"><p class="rcount">${nProp(items.length)}</p></div>
+    <p class="lead">${esc(desc)}</p>
   </div>
-  <p class="lead">${esc(desc)}</p>
-  <div class="grid">${items.map(x => cardHtml(x, "")).join("")}</div>
-  ${collectionLinks(cols, c.slug)}
-  <div class="actions" style="margin-top:var(--s5)">
-    <a class="btn btn-primary" target="_blank" rel="noopener" href="${wa(`مرحباً أستاذ محمد، بدوّر على ${c.h1}.`)}">استفسر على واتساب <span class="ar">←</span></a>
-    <a class="btn btn-ghost" href="index.html">كل العقارات</a>
+  <div class="index two" style="margin-top:14px">${sorted.map((x, i) => rowHtml(x, i, "")).join("")}</div>
+  <div class="wrap">
+    ${collectionLinks(cols, c.slug)}
+    <div class="actions">
+      <a class="btn btn-primary" target="_blank" rel="noopener" href="${wa(`مرحباً أستاذ محمد، بدوّر على ${c.h1}.`)}">${WA_SVG}استفسر على واتساب</a>
+      <a class="btn btn-ghost" href="index.html">كل العقارات</a>
+    </div>
   </div>
 </main>
+<script type="application/json" id="mk-data">${jsonInline(publicData(items))}<\/script>
 ${FOOT()}`;
-  return headHtml(c.title, desc, canonical, jsonld, extra) + body;
+  return headHtml(c.title, desc, canonical, jsonld, extra, null, "pg-collection") + body;
 }
 
 function indexPage(live) {
@@ -525,54 +435,53 @@ function indexPage(live) {
     makesOffer: ["بيع وشراء الأراضي", "بيع الفلل والمزارع", "الاستشارات العقارية", "متابعة الأوراق والتسجيل العقاري", "الإشراف على البناء والإكساء"]
       .map(s => ({ "@type": "Offer", itemOffered: { "@type": "Service", name: s } }))
   };
-  const stats = ["land", "villa", "farm", "apt"]
-    .map(en => [en, live.filter(x => CAT_EN[x.cat] === en).length])
-    .filter(([, v]) => v)
-    .map(([en, v]) => `${v} ${CAT_AR[en]}`)
-    .join(" · ");
+  const list = live.slice().sort(newestFirst);
+  const maxDunam = Math.round(Math.max(0, ...live.map(x => (+x.area_m2 || 0) / 1000)));
+  const nAreas = new Set(live.map(x => x.area)).size;
+  const stats = [[live.length, "عقاراً متاحاً"], ...(maxDunam ? [[maxDunam, "دنم أكبر أرض"]] : []), [nAreas, nAreas === 1 ? "منطقة" : "مناطق"]];
   const body = `${NAV("")}
-<section class="hero">
-  <div class="hero-bg"${heroStyle(live)}></div>
-  <div class="hero-inner">
-    <div class="hero-txt">
-      <p class="eyebrow">يعفور · قرى الشام · الصبورة</p>
-      <h1>عقارات يعفور<br><span class="g">وقرى الشام</span></h1>
-      <p class="lead">أراضٍ وفلل ومزارع وشقق للبيع، معاينة على الأرض.<br>مرافقة من المعاينة حتى التسجيل.</p>
-      <div class="actions">
-        <a class="btn btn-primary" target="_blank" rel="noopener" href="${wa("مرحباً أستاذ محمد، أرغب بالاستفسار عن العقارات المتوفرة لديك.")}">تواصل على واتساب <span class="ar">←</span></a>
-        <a class="btn btn-ghost" href="#listings">تصفّح العقارات</a>
-      </div>
-      <div class="who">
-        <img class="avatar" src="img/mohammad-khaled.jpg" width="128" height="128" alt="${NAME} مستشار عقاري في يعفور وقرى الشام">
-        <div><b>${NAME}</b><small>${ROLE} · يعفور وقرى الشام</small></div>
-      </div>
-    </div>
-    ${featureHtml(live)}
+<section class="hero" id="hero">
+  <canvas id="hero3d" aria-hidden="true"></canvas>
+  <div class="hcopy" id="hcopy">
+    <div class="eyebrow"><i></i>عقارات مختارة · ريف دمشق</div>
+    <h1 id="htitle"><span class="giant"><span class="w" style="animation-delay:.1s">يعفور</span></span><span class="giant2"><span class="w gtext" style="animation-delay:.25s">وقرى الشام</span></span></h1>
+    <p class="sr">${esc(desc)}</p>
   </div>
+  <div class="touchhint" id="thint"><i></i>اسحب للتنقل بين العقارات · المس قطعة لاختيارها</div>
+  <div class="pcard" id="pcard" hidden aria-live="polite">
+    <div class="pc-top"><span class="pc-type" id="pcType"></span><span class="pc-code" id="pcCode"></span><span class="pc-dots" id="pcDots"></span></div>
+    <div class="pc-title" id="pcTitle"></div>
+    <div class="pc-row"><b id="pcPrice"></b><small id="pcMeta"></small></div>
+    <div class="pc-actions">
+      <button class="pc-nav" id="pcPrev" type="button" aria-label="السابق">${CHEV_R}</button>
+      <a class="pc-wa" id="pcWa" href="#" target="_blank" rel="noopener">استفسر على واتساب</a>
+      <a class="pc-more" id="pcMore" href="#">التفاصيل</a>
+      <button class="pc-nav" id="pcNext" type="button" aria-label="التالي">${CHEV_L}</button>
+    </div>
+  </div>
+  <div class="hbottom"><p>أراضٍ وفلل ومزارع — معاينة، تدقيق أوراق، ومرافقة حتى التسجيل.</p><a class="round" target="_blank" rel="noopener" href="${wa("مرحباً أستاذ محمد، أرغب بالاستفسار عن العقارات المتوفرة لديك.")}">تواصل<br>الآن</a></div>
 </section>
-<div class="wrap">${searchHtml(live)}</div>
-<main class="wrap">
-  <div class="sechead">
-    <div>
-      <p class="eyebrow">العقارات المتاحة</p>
-      <h2 id="listings">أراضٍ وفلل ومزارع<br><span class="g">للبيع في يعفور وقرى الشام</span></h2>
-    </div>
-    <div class="side">
-      <p class="rcount" id="rcount">${live.length} عقار متاح</p>
-      <p class="statline">${stats}</p>
-    </div>
-  </div>
-  <div class="grid" id="listings-grid">${live.map(x => cardHtml(x, "")).join("")}</div>
+<div class="marquee" aria-hidden="true"><div class="mrow" id="m1"></div><div class="mrow" id="m2"></div></div>
+<section class="sec"><div class="wrap">
+  <p class="kicker rv">بالأرقام <b>01</b></p>
+  <h2 class="h2 rv">أرضك <span class="gtext">موجودة هنا</span></h2>
+  <div class="stats">${stats.map(([v, l]) => `<div class="stat rv"><b data-count="${v}">${v}</b><small>${l}</small></div>`).join("")}</div>
+</div></section>
+<section class="sec" id="listings">
+  <div class="wrap"><p class="kicker rv">كل العقارات <b>02</b></p><h2 class="h2 rv">أراضٍ وفلل ومزارع<br><span class="gtext">للبيع في يعفور وقرى الشام</span></h2></div>
+  ${searchHtml(live)}
+  <p class="rcount" id="rcount">${live.length} عقار متاح</p>
+  <div class="index" id="listings-grid">${list.map((x, i) => rowHtml(x, i, "")).join("")}</div>
   <p class="rnone" id="rnone" hidden>ما في عقار مطابق لهالبحث. جرّب توسّع الميزانية، أو <a href="#request">ابعتلي طلبك</a> وبدوّرلك.</p>
-  ${collectionLinks(collectionsAll(live))}
+  <div class="wrap">${collectionLinks(collectionsAll(live))}</div>
+</section>
+<div class="wrap">
   ${requestHtml()}
-  <section class="why">
-    <div class="why-grid">${whyHtml()}</div>
-  </section>
-  <section id="about" class="about glass">
-    <h2>من أنا</h2>
-    <p>أنا ${NAME}، ${ROLE} أعمل في يعفور وقرى الشام والصبورة بريف دمشق. أساعد المشترين، ومنهم المغتربون الذين لا يستطيعون الحضور، على اختيار الأرض أو الفيلا المناسبة، والتحقق من الأوراق، ومتابعة الإجراءات حتى التسجيل. وإلى جانب الوساطة العقارية أتابع أعمال البناء والإكساء، فأستطيع تقدير كلفة البناء أو الإكساء قبل الشراء.</p>
-    <h2>أسئلة متكررة</h2>
+  ${whyHtml()}
+  <section id="about" class="about">
+    <h2 class="h2 rv">من أنا</h2>
+    <p class="rv">أنا ${NAME}، ${ROLE} أعمل في يعفور وقرى الشام والصبورة بريف دمشق. أساعد المشترين، ومنهم المغتربون الذين لا يستطيعون الحضور، على اختيار الأرض أو الفيلا المناسبة، والتحقق من الأوراق، ومتابعة الإجراءات حتى التسجيل. وإلى جانب الوساطة العقارية أتابع أعمال البناء والإكساء، فأستطيع تقدير كلفة البناء أو الإكساء قبل الشراء.</p>
+    <h2 class="h2 rv" style="margin-top:40px">أسئلة متكررة</h2>
     <dl class="faq">
       <dt>في أي مناطق تعمل؟</dt><dd>يعفور وقرى الشام والصبورة وما حولها في ريف دمشق.</dd>
       <dt>هل عندك عقارات في الصبورة؟</dt><dd>الصبورة من مناطق عملي. المعروض على الموقع اليوم في يعفور وقرى الشام الملاصقتين لها — تواصل معي وبشوفلك المتوفر بالصبورة.</dd>
@@ -581,9 +490,14 @@ function indexPage(live) {
       <dt>كيف أستفسر عن عقار؟</dt><dd>افتح صفحة العقار وأرسل رسالة واتساب فيها كود العقار، مثل MK-012.</dd>
     </dl>
   </section>
-</main>
-${FOOT()}
-<script>${SEARCH_JS}${REQUEST_JS}<\/script>`;
+</div>
+<section class="reveal" id="reveal"><div class="reveal-in"><div class="circle" id="circle">
+  <div class="h2">قلّي شو بدك،<br>وأنا بدوّرلك</div>
+  <p>أرسل طلبك وأرشّح لك العقارات المناسبة خلال يوم.</p>
+  <a target="_blank" rel="noopener" href="${wa("مرحباً أستاذ محمد، أرغب بالاستفسار عن العقارات المتوفرة لديك.")}">أرسل طلبك على واتساب</a>
+</div></div></section>
+<script type="application/json" id="mk-data">${jsonInline(publicData(live))}<\/script>
+${FOOT()}`;
   const faq = {
     "@context": "https://schema.org", "@type": "FAQPage", mainEntity: [
       { "@type": "Question", name: "في أي مناطق يعمل محمد خالد؟", acceptedAnswer: { "@type": "Answer", text: "يعفور وقرى الشام والصبورة وما حولها في ريف دمشق." } },
@@ -592,7 +506,7 @@ ${FOOT()}
       { "@type": "Question", name: "هل يمكن الشراء من خارج سوريا؟", acceptedAnswer: { "@type": "Answer", text: "نعم، مع إرسال صور العقار وأوراقه ومرافقة الإجراءات حتى التسجيل حسب القانون والوكالة." } }]
   };
   return headHtml(title, desc, BASE + "/", jsonld,
-    `<script type="application/ld+json">${JSON.stringify(faq)}<\/script>`) + body;
+    `<script type="application/ld+json">${JSON.stringify(faq)}<\/script>`, null, "pg-index") + body;
 }
 function sitemapXml(live) {
   const urls = [[BASE + "/", "1.0"]]
@@ -612,7 +526,7 @@ function publicData(live) {
       price: conf ? x.price : null, mode: conf ? (x.mode === "للدنم" ? "dunam" : "total") : "ask",
       nego: conf ? !!x.nego : false, feats: x.feats || [], note: x.note || "",
       total: conf ? totalOf(x) : null, unconfirmed: !conf,
-      papers: x.papers || "", photos: []
+      papers: x.papers || "", photos: [], featured: !!x.featured
     };
   });
 }
@@ -878,7 +792,7 @@ function galleryPage(x) {
   ).join("");
   const waTxt = `مرحباً أستاذ محمد، شفت صور العقار ${x.code} (${x.title}) وبدي أستفسر.`;
   return `<!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="solid">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
@@ -886,31 +800,20 @@ function galleryPage(x) {
 <meta name="robots" content="noindex,nofollow,noarchive,noimageindex">
 <meta name="referrer" content="no-referrer">
 <link rel="icon" href="${BASE}/favicon.svg" type="image/svg+xml">
-<meta name="theme-color" content="#0B0B0C">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@400;500;700;800&display=swap">
-<link rel="stylesheet" href="${BASE}/style.css">
-<style>
-.gwrap{max-width:900px;margin-inline:auto;padding:var(--s5) var(--s4) var(--s7)}
-.ghead{padding:var(--s5);border-radius:var(--r3);margin-bottom:var(--s5)}
-.ghead h1{font-size:var(--f-sec);color:var(--ink);margin:var(--s2) 0}
-.gshots{display:grid;gap:var(--s4)}
-.gshot{margin:0;border:1px solid var(--glass-line);border-radius:var(--r3);overflow:hidden;background:rgba(0,0,0,.4)}
-.gshot img{width:100%;display:block}
-.gnote{margin-top:var(--s5);font-size:var(--f2);color:var(--muted);text-align:center;line-height:1.8}
-</style>
+<meta name="theme-color" content="#06231b">
+<link rel="preload" href="${BASE}/assets/fonts/lalezar-arabic.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="${BASE}/assets/mk.css?v=${ASSET_V}">
 </head>
-<body>
+<body class="pg-gallery">
 <div class="gwrap">
-  <header class="ghead glass">
-    <p class="eyebrow">صور خاصة · ${esc(x.code)}</p>
+  <header class="ghead">
+    <p class="eyebrow"><i></i>صور خاصة · ${esc(x.code)}</p>
     <h1>${esc(x.title)}</h1>
-    <p class="where"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">${ICONS.pin}</svg>${esc(x.area)} · ريف دمشق</p>
-    <div class="specrow">${specRow(x)}</div>
-    <div class="fprice"><span class="main">${main}</span>${unit2 ? `<span class="u">${unit2}</span>` : ""}</div>
-    <div class="actions" style="margin-top:var(--s4)">
-      <a class="btn btn-primary" target="_blank" rel="noopener" href="${wa(waTxt)}">استفسر على واتساب <span class="ar">←</span></a>
+    <p class="where">${esc(x.area)} · ريف دمشق</p>
+    <div class="gspecs">${specRow(x)}</div>
+    <div class="gprice">${main}${unit2 ? `<small>${unit2}</small>` : ""}</div>
+    <div class="actions">
+      <a class="btn btn-primary" target="_blank" rel="noopener" href="${wa(waTxt)}">${WA_SVG}استفسر على واتساب</a>
       <a class="btn btn-ghost" href="tel:+${PHONE_INTL}" dir="ltr">${PHONE_LOCAL}</a>
     </div>
   </header>
@@ -1224,6 +1127,7 @@ function openForm(r) {
   $("f_price").value = r && r.price ? r.price : "";
   $("f_nego").checked = !!(r && r.nego);
   $("f_conf").checked = r ? r.confirmed !== false : true;
+  $("f_feat").checked = !!(r && r.featured);
   $("f_papers").value = r ? (r.papers || "") : "";
   $("f_status").value = r ? (r.status || "متاح") : "متاح";
   $("f_note").value = r ? (r.note || "") : "";
@@ -1259,7 +1163,7 @@ function save() {
   const body = {
     code, status: $("f_status").value, cat: $("f_cat").value, title,
     area: $("f_area").value, area_m2: m2, bua: isFinite(bua) && bua > 0 ? Math.round(bua) : null,
-    mode, price: Math.round(price), nego: $("f_nego").checked, confirmed: $("f_conf").checked,
+    mode, price: Math.round(price), nego: $("f_nego").checked, confirmed: $("f_conf").checked, featured: $("f_feat").checked,
     papers: $("f_papers").value, feats: feats.slice(), photos: photos.slice(),
     note: $("f_note").value.trim(),
     src_place: $("p_place").value.trim(), src_by: $("p_by").value.trim(),
