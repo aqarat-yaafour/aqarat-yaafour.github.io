@@ -1306,6 +1306,21 @@ $("galCopy").addEventListener("click", async () => {
   catch (e) { $("galLink").select(); m.textContent = "حدّد الرابط وانسخه يدوياً."; }
   setTimeout(() => { m.hidden = true; }, 3000);
 });
+/* معاينة: الصفحة تُنشأ على الموقع عند «نشر» فقط، فقبل النشر نعرضها من اللوحة نفسها */
+$("galOpen").addEventListener("click", ev => {
+  if (!galRow || !galRow.galKey) return;
+  const base = JSON.parse(BASE_ROWS).find(b => b.code === galRow.code);
+  const live = base && base.galKey === galRow.galKey && (base.photos || []).length
+    && JSON.stringify(base.photos) === JSON.stringify(galRow.photos || []);
+  if (live) return;                       /* منشورة فعلاً: يفتح الرابط الحقيقي */
+  ev.preventDefault();
+  const m = $("galMsg"); m.hidden = false; m.className = "upstat";
+  if (!(galRow.photos || []).length) { m.textContent = "ما في صور لهذا العقار — أضف صوراً أولاً ليصير للرابط صفحة."; return; }
+  let html = galleryPage(galRow);
+  for (const p of galRow.photos) if (newBlobs[p]) html = html.split(`${BASE}/${esc(p)}`).join("data:image/jpeg;base64," + newBlobs[p]);
+  window.open(URL.createObjectURL(new Blob([html], { type: "text/html" })), "_blank");
+  m.textContent = "هذه معاينة من اللوحة — الرابط الحقيقي يشتغل بعد «نشر».";
+});
 $("galNew").addEventListener("click", () => {
   if (!galRow) return;
   if (galRow.galKey && !confirm("الرابط القديم رح يبطل فوراً وما حدا يقدر يفتحه. متأكد؟")) return;
