@@ -214,6 +214,7 @@ html.lock .dock{transform:translateY(140%)!important}
 .fp small{display:block;font-size:11px;color:var(--mute);margin-top:2px}
 .fp .bd{font-size:12px;color:var(--ink2)}
 .sw.on{background:rgba(var(--acc-rgb),.14);border-color:var(--gold)}
+.sw .ic3{flex:none;width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;background:var(--card);color:var(--gold);border:1px solid var(--line)}
 .sw .dot2{flex:none;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);position:relative;overflow:hidden}
 .sw b{display:block;font-size:14px}
 .sw small{display:block;font-size:11.5px;color:var(--mute)}
@@ -319,7 +320,7 @@ html.lock .dock{transform:translateY(140%)!important}
   الأسعار والتوفر قابلة للتغيير. الأوراق تُعرض كاملة قبل أي عربون.
 </footer>
 
-<div class="pal" id="pal"><button class="pal-btn" id="palBtn" aria-expanded="false"><i></i>الألوان والخطوط</button><div class="pal-list" id="palList"></div></div>
+<div class="pal" id="pal"><button class="pal-btn" id="palBtn" aria-expanded="false"><i></i>المشهد والألوان والخطوط</button><div class="pal-list" id="palList"></div></div>
 
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="تفاصيل العقار"><div class="grab" id="grab"><i></i></div><div class="sheet-body" id="sheetBody"></div></div>
@@ -392,7 +393,7 @@ function applyPalette(key, save = true) {
   set('--bg', P.bg); set('--bg2', P.bg2); set('--card', P.card); set('--sheet', P.sheet); set('--ink', P.ink); set('--ink2', P.ink2); set('--mute', P.mute);
   set('--gold', P.acc); set('--gold2', P.acc2); set('--gold3', P.acc3); set('--on-acc', P.onAcc); set('--cover1', P.cover1); set('--cover2', P.cover2); set('--shadow', P.shadow);
   set('--bg-rgb', rgb(P.bg).join(',')); set('--ink-rgb', rgb(P.ink).join(',')); set('--acc-rgb', rgb(P.acc).join(',')); set('--acc2-rgb', rgb(P.acc2).join(','));
-  THEME = { ...P, accRgb: rgb(P.acc), acc2Rgb: rgb(P.acc2) };
+  THEME = { ...P, accRgb: rgb(P.acc), acc2Rgb: rgb(P.acc2), inkRgb: rgb(P.ink), bgRgb: rgb(P.bg) };
   document.getElementById('themeColor').setAttribute('content', P.bg);
   if (save) {
     try { localStorage.setItem('mk-palette', THEME_KEY); } catch (e) {}
@@ -423,7 +424,10 @@ function loadFontSamples() {   // every display face, only once the panel is ope
 }
 function renderPalList() {
   const el = document.getElementById('palList'); if (!el) return;
-  el.innerHTML = `<div class="pal-h">الألوان</div><div class="pal-grid">` + Object.entries(PALETTES).map(([k, P]) => `<button class="sw${k === THEME_KEY ? ' on' : ''}" data-p="${k}">
+  const scenesHtml = (typeof SCENES !== 'undefined' && SCENES) ? `<div class="pal-h">المشهد ثلاثي الأبعاد</div><div class="pal-grid">` + Object.entries(SCENES).map(([k, S]) => `<button class="sw sc${k === SCENE_KEY ? ' on' : ''}" data-s="${k}">
+    <span class="ic3"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${S.icon}</svg></span>
+    <span><b>${S.name}</b><small>${S.note}</small></span></button>`).join('') + `</div>` : '';
+  el.innerHTML = scenesHtml + `<div class="pal-h">الألوان</div><div class="pal-grid">` + Object.entries(PALETTES).map(([k, P]) => `<button class="sw${k === THEME_KEY ? ' on' : ''}" data-p="${k}">
     <span class="dot2" style="background:linear-gradient(135deg,${P.bg} 0 50%,${P.acc} 50% 75%,${P.ink} 75%)"></span>
     <span><b>${P.name}</b><small>${P.note}</small></span></button>`).join('') + `</div>
     <div class="pal-h">الخطوط</div>` + Object.entries(FONTS).map(([k, F]) => `<button class="fp${k === FONT_KEY ? ' on' : ''}" data-f="${k}">
@@ -531,10 +535,348 @@ function addRipple(e) {
   if (ripples.length > 4) ripples.shift();
   $('thint').style.opacity = 0;
 }
-$('hero').addEventListener('pointerdown', addRipple);
-$('hero').addEventListener('pointermove', e => { if (e.pointerType === 'mouse' || e.buttons) addRipple(e); });
+const heroEl = $('hero');
+let heroDown = false, heroLastX = 0;
+function steerFrom(e) { const r = heroEl.getBoundingClientRect(); STEER.tx = clamp((e.clientX - r.left) / r.width * 2 - 1, -1, 1); STEER.ty = clamp((e.clientY - r.top) / r.height * 2 - 1, -1, 1); }
+heroEl.addEventListener('pointerdown', e => {
+  heroDown = true; heroLastX = e.clientX; S3.drag = true; S3.vyaw = 0; steerFrom(e);
+  if (SCENE_KEY === 'terrain') addRipple(e); else $('thint').style.opacity = 0;
+});
+heroEl.addEventListener('pointermove', e => {
+  if (heroDown) { const dx = e.clientX - heroLastX; heroLastX = e.clientX; S3.yaw += dx * .0085; S3.vyaw = S3.vyaw * .5 + dx * .0085 * .5; }
+  if (e.pointerType === 'mouse' || heroDown) steerFrom(e);
+  if (SCENE_KEY === 'terrain' && (e.pointerType === 'mouse' || e.buttons)) addRipple(e);
+});
+const heroUp = () => { heroDown = false; S3.drag = false; STEER.tx = 0; STEER.ty = 0; };
+['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => heroEl.addEventListener(ev, heroUp));
 addEventListener('deviceorientation', e => { if (e.gamma != null) tiltTarget = clamp(e.gamma / 30, -1, 1); });
 setTimeout(() => { const h = $('thint'); if (h) h.style.opacity = 0; }, 7000);
+
+/* ================= 3D scenes (hand-made engine, no libraries) ================= */
+const S3 = { yaw: 0, pitch: .35, vyaw: 0, dist: 10, f: 500, cx: 0, cy: 0, drag: false };
+const STEER = { x: 0, y: 0, tx: 0, ty: 0 };
+let DT = 1, staticDirty = true;
+const LIGHT = (() => { const l = [-.35, .75, .55], n = Math.hypot(l[0], l[1], l[2]); return l.map(v => v / n); })();
+const COL = (c, a) => { const t = THEME, r = c === 'acc' ? t.accRgb : c === 'acc2' ? t.acc2Rgb : c === 'bg' ? t.bgRgb : t.inkRgb; return `rgba(${r[0]},${r[1]},${r[2]},${Math.max(0, Math.min(1, a)).toFixed(3)})`; };
+const v3 = {
+  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  cross: (a, b) => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]],
+  dot: (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+};
+/* primitives: l = polyline, d = dot, f = polygon (may carry `kids` drawn right after it, e.g. windows) */
+const Lp = (p, c = 'acc', a = .5, w = 1, lay = 1, dash = 0) => ({ k: 'l', p, c, a, w, lay, dash });
+const Dp = (p, r = 2, c = 'acc', a = 1, lay = 1) => ({ k: 'd', p, r, c, a, lay });
+const Fp = (p, s = 'main', lay = 1, cull = true) => ({ k: 'f', p, s, lay, cull });
+
+function box(cx, cy, cz, sx, sy, sz, s = 'main', win = {}) {
+  const x0 = cx - sx / 2, x1 = cx + sx / 2, y0 = cy - sy / 2, y1 = cy + sy / 2, z0 = cz - sz / 2, z1 = cz + sz / 2, e = .006;
+  const F = [
+    [[x1, y0, z0], [x1, y1, z0], [x1, y1, z1], [x1, y0, z1]],   // +x
+    [[x0, y0, z1], [x0, y1, z1], [x0, y1, z0], [x0, y0, z0]],   // -x
+    [[x0, y1, z0], [x0, y1, z1], [x1, y1, z1], [x1, y1, z0]],   // +y
+    [[x0, y0, z1], [x0, y0, z0], [x1, y0, z0], [x1, y0, z1]],   // -y
+    [[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]],   // +z
+    [[x1, y0, z0], [x0, y0, z0], [x0, y1, z0], [x1, y1, z0]]    // -z
+  ].map(p => Fp(p, s));
+  const kid = (arr, mk) => (arr || []).map(([u, v, w, h, st]) => Fp(mk(u, v, w / 2, h / 2), st || 'glass'));
+  F[0].kids = kid(win.right, (u, v, hw, hh) => [[x1 + e, cy + v - hh, cz + u - hw], [x1 + e, cy + v + hh, cz + u - hw], [x1 + e, cy + v + hh, cz + u + hw], [x1 + e, cy + v - hh, cz + u + hw]]);
+  F[1].kids = kid(win.left, (u, v, hw, hh) => [[x0 - e, cy + v - hh, cz + u + hw], [x0 - e, cy + v + hh, cz + u + hw], [x0 - e, cy + v + hh, cz + u - hw], [x0 - e, cy + v - hh, cz + u - hw]]);
+  F[4].kids = kid(win.front, (u, v, hw, hh) => [[cx + u - hw, cy + v - hh, z1 + e], [cx + u + hw, cy + v - hh, z1 + e], [cx + u + hw, cy + v + hh, z1 + e], [cx + u - hw, cy + v + hh, z1 + e]]);
+  return F;
+}
+function pyr(cx, by, cz, r, h, s = 'leaf') {
+  const ap = [cx, by + h, cz], b = [0, 1, 2, 3].map(i => { const a = .78 + i * Math.PI / 2; return [cx + Math.cos(a) * r, by, cz + Math.sin(a) * r]; }), out = [];
+  for (let i = 0; i < 4; i++) {
+    let tri = [b[i], b[(i + 1) % 4], ap];
+    const n = v3.cross(v3.sub(tri[1], tri[0]), v3.sub(tri[2], tri[0]));
+    const m = [(tri[0][0] + tri[1][0] + tri[2][0]) / 3 - cx, (tri[0][1] + tri[1][1] + tri[2][1]) / 3 - (by + h * .3), (tri[0][2] + tri[1][2] + tri[2][2]) / 3 - cz];
+    if (v3.dot(n, m) < 0) tri = [tri[1], tri[0], tri[2]];
+    out.push(Fp(tri, s));
+  }
+  return out;
+}
+const tree = (x, z, h) => [Lp([[x, 0, z], [x, h * .32, z]], 'ink', .55, 1.6), ...pyr(x, h * .22, z, h * .3, h * .82)];
+const rectLoop = (x0, z0, x1, z1, y = 0) => [[x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1], [x0, y, z0]];
+const groundGrid = (n, step, a = .06) => { const P = []; for (let i = -n; i <= n; i++) P.push(Lp([[i * step, 0, -n * step], [i * step, 0, n * step]], 'ink', a, 1, 0), Lp([[-n * step, 0, i * step], [n * step, 0, i * step]], 'ink', a, 1, 0)); return P; };
+
+/* ---- the renderer: rotate -> cull back faces -> painter's sort -> draw ---- */
+function draw3d(prims, o = {}) {
+  const cyw = Math.cos(S3.yaw), syw = Math.sin(S3.yaw), cp = Math.cos(S3.pitch), sp = Math.sin(S3.pitch);
+  const V = p => { const x = p[0] * cyw + p[2] * syw, z0 = -p[0] * syw + p[2] * cyw; return [x, p[1] * cp - z0 * sp, p[1] * sp + z0 * cp]; };
+  const S = v => { const d = Math.max(.3, S3.dist - v[2]), k = S3.f / d; return [S3.cx + v[0] * k, S3.cy - v[1] * k]; };
+  const fogA = z => o.fog ? Math.max(0, Math.min(1, 1 - ((S3.dist - z) - o.fog[0]) / (o.fog[1] - o.fog[0]))) : 1;
+  const dimA = z => o.dimBack ? .16 + .84 * Math.max(0, Math.min(1, (z + o.dimBack) / (2 * o.dimBack))) : 1;
+  const faceItem = q => {
+    const v = q.p.map(V), a = v[0], n = v3.cross(v3.sub(v[1], a), v3.sub(v[2], a)), l = Math.hypot(n[0], n[1], n[2]) || 1;
+    n[0] /= l; n[1] /= l; n[2] /= l;
+    if (q.cull !== false && (-n[0] * a[0] - n[1] * a[1] + n[2] * (S3.dist - a[2])) <= 0) return null;
+    let z = 0; for (const w of v) z += w[2];
+    return { q, v, n, z: z / v.length, lay: q.lay };
+  };
+  const items = [];
+  for (const q of prims) {
+    if (q.k === 'f') { const it = faceItem(q); if (it) items.push(it); }
+    else if (q.k === 'l') { const v = q.p.map(V); let z = 0; for (const w of v) z += w[2]; items.push({ q, v, z: z / v.length, lay: q.lay }); }
+    else { const v = V(q.p); items.push({ q, v, z: v[2], lay: q.lay }); }
+  }
+  items.sort((A, B) => A.lay - B.lay || A.z - B.z);
+  const paintFace = it => {
+    const q = it.q, am = fogA(it.z) * dimA(it.z);
+    if (am < .02) return;
+    ctx.beginPath();
+    it.v.forEach((w, i) => { const s = S(w); i ? ctx.lineTo(s[0], s[1]) : ctx.moveTo(s[0], s[1]); });
+    ctx.closePath();
+    const dot = v3.dot(it.n, LIGHT), b = .28 + .72 * (q.cull === false ? Math.abs(dot) : Math.max(0, dot));
+    let solid = true, fill, stroke = null, lw = 1;
+    switch (q.s) {
+      case 'roof': fill = COL('acc2', (.1 + .26 * b) * am); stroke = COL('acc2', .9 * am); lw = 1.2; break;
+      case 'glass': solid = false; fill = COL('acc2', (.3 + .35 * b) * am); stroke = COL('acc2', .95 * am); lw = .8; break;
+      case 'door': fill = COL('acc2', .16 * am); stroke = COL('acc2', .9 * am); break;
+      case 'water': solid = false; fill = COL('acc2', .24 * am); stroke = COL('acc2', .8 * am); break;
+      case 'tile': fill = COL('ink', (.04 + .1 * b) * am); stroke = COL('ink', .32 * am); break;
+      case 'leaf': fill = COL('acc', (.1 + .2 * b) * am); stroke = COL('acc', .75 * am); break;
+      case 'glow': solid = false; fill = COL('acc2', .38 * am); stroke = COL('acc2', 1 * am); lw = 1.6; break;
+      default: fill = COL('acc', (.05 + .2 * b) * am); stroke = COL('acc', .62 * am); lw = 1.1;
+    }
+    if (solid) { ctx.fillStyle = COL('bg', am); ctx.fill(); }
+    ctx.fillStyle = fill; ctx.fill();
+    if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = lw; ctx.lineJoin = 'round'; ctx.stroke(); }
+  };
+  ctx.setLineDash([]);
+  for (const it of items) {
+    const q = it.q;
+    if (q.k === 'f') {
+      paintFace(it);
+      if (q.kids) for (const kq of q.kids) { const kit = faceItem(kq); if (kit) { kit.z = it.z; paintFace(kit); } }
+    } else if (q.k === 'l') {
+      const am = fogA(it.z) * dimA(it.z); if (am < .02) continue;
+      ctx.beginPath(); it.v.forEach((w, i) => { const s = S(w); i ? ctx.lineTo(s[0], s[1]) : ctx.moveTo(s[0], s[1]); });
+      ctx.strokeStyle = COL(q.c, q.a * am); ctx.lineWidth = q.w; ctx.setLineDash(q.dash ? [5, 6] : []); ctx.stroke(); ctx.setLineDash([]);
+    } else {
+      const am = fogA(it.z) * dimA(it.z), s = S(it.v);
+      ctx.beginPath(); ctx.arc(s[0], s[1], q.r * (o.dimBack ? .6 + .4 * dimA(it.z) : 1), 0, 6.2832);
+      ctx.fillStyle = COL(q.c, q.a * am); ctx.fill();
+    }
+  }
+}
+function paintBg() {
+  const [ar, ag, ab] = THEME.accRgb;
+  ctx.fillStyle = THEME.bg; ctx.fillRect(0, 0, W, H);
+  const gr = ctx.createRadialGradient(W * .62, H * .55, 10, W * .62, H * .55, W * .95);
+  gr.addColorStop(0, `rgba(${ar},${ag},${ab},.16)`); gr.addColorStop(1, `rgba(${ar},${ag},${ab},0)`);
+  ctx.fillStyle = gr; ctx.fillRect(0, 0, W, H);
+}
+function cam(dist, fk, cyf, pitch) { S3.dist = dist; S3.pitch = pitch; S3.f = Math.min(W, H * .62) * fk; S3.cx = W / 2; S3.cy = H * cyf; }
+function stepYaw(auto) { if (!S3.drag) { S3.yaw += S3.vyaw * DT + auto * DT; S3.vyaw *= Math.pow(.93, DT); } }
+const SC_CACHE = {};
+const cached = (k, fn) => SC_CACHE[k] || (SC_CACHE[k] = fn());
+let SCENE_T0 = performance.now();
+const sceneT = now => Math.max(0, (now - SCENE_T0) / 1000);   // rAF timestamps can be slightly older than performance.now()
+
+/* ---- 1. villa with pool ---- */
+function buildVilla() {
+  const P = groundGrid(6, 1);
+  P.push(Lp(rectLoop(-4.8, -3.6, 4.8, 4.8), 'acc', .7, 1.4, 0, 1));
+  P.push(...box(-.9, .55, -.2, 3.4, 1.1, 2.4, 'main', {
+    front: [[-1.1, .05, .6, .55], [-.1, .05, .6, .55], [.95, -.1, .5, .8, 'door']],
+    left: [[-.5, .05, .55, .5], [.5, .05, .55, .5]]
+  }));
+  P.push(...box(1.4, 1.1, -.2, 2, 2.2, 2.4, 'main', {
+    front: [[-.4, -.3, .5, .5], [.4, -.3, .5, .5], [-.4, .5, .5, .5], [.4, .5, .5, .5]],
+    right: [[-.5, -.3, .5, .5], [.5, -.3, .5, .5], [-.5, .5, .5, .5], [.5, .5, .5, .5]]
+  }));
+  P.push(...box(-.95, 1.16, -.2, 3.7, .12, 2.7, 'roof'), ...box(1.4, 2.26, -.2, 2.3, .12, 2.7, 'roof'));
+  P.push(Fp([[-2.6, .01, 1.9], [1.6, .01, 1.9], [1.6, .01, 3.4], [-2.6, .01, 3.4]], 'water', 0, false));
+  P.push(Lp(rectLoop(-2.6, 1.9, 1.6, 3.4, .02), 'acc2', .95, 1.4, 0), Lp(rectLoop(-3, 1.6, 2, 3.7, .01), 'acc2', .35, 1, 0, 1));
+  for (let i = 1; i < 4; i++) P.push(Lp([[-2.6 + i * 1.05, .02, 1.9], [-2.6 + i * 1.05, .02, 3.4]], 'acc2', .25, 1, 0));
+  [[-3.9, 2.6, 1.5], [3.7, 3, 1.3], [3.9, -2.3, 1.6], [-4, -2.5, 1.4], [.2, -3, 1.2]].forEach(([x, z, h]) => P.push(...tree(x, z, h)));
+  const fence = rectLoop(-4.8, -3.6, 4.8, 4.8, .3); P.push(Lp(fence, 'ink', .35, 1));
+  for (let i = 0; i < fence.length - 1; i++) { const a = fence[i], b = fence[i + 1], n = Math.round(Math.hypot(b[0] - a[0], b[2] - a[2]) / 1.2); for (let k = 0; k < n; k++) { const t = k / n, x = a[0] + (b[0] - a[0]) * t, z = a[2] + (b[2] - a[2]) * t; P.push(Lp([[x, 0, z], [x, .3, z]], 'ink', .3, 1)); } }
+  return P;
+}
+
+/* ---- 2. residential district from above ---- */
+function buildDistrict() {
+  const P = [], N = 8, cell = 1.15, off = -(N - 1) / 2 * cell; let seed = 11;
+  const rnd = () => (seed = seed * 16807 % 2147483647) / 2147483647;
+  P.push(...groundGrid(5, 1.15, .05));
+  P.hl = [off + 5 * cell, off + 2 * cell];
+  for (let i = 0; i < N; i++) for (let j = 0; j < N; j++) {
+    const x = off + i * cell, z = off + j * cell, r = rnd();
+    if (i === 5 && j === 2) continue;
+    if (r < .17) { P.push(...tree(x - .18, z, .8 + rnd() * .4), ...tree(x + .22, z + .16, .7 + rnd() * .3)); continue; }
+    const tall = rnd() > .92, h = tall ? 1.7 : .35 + rnd() * .7, w = .7 + rnd() * .12, d = .7 + rnd() * .12;
+    P.push(...box(x, h / 2, z, w, h, d, 'main', h > .55 ? { front: [[-.17, 0, .16, .2], [.17, 0, .16, .2]] } : {}), ...box(x, h + .04, z, w + .1, .07, d + .1, 'roof'));
+  }
+  const [hx, hz] = P.hl;
+  P.push(Fp([[hx - .5, .015, hz - .5], [hx + .5, .015, hz - .5], [hx + .5, .015, hz + .5], [hx - .5, .015, hz + .5]], 'glow', 0, false));
+  P.push(...box(hx, .3, hz, .5, .6, .5, 'main', { front: [[0, .05, .18, .2]] }), ...box(hx, .63, hz, .62, .07, .62, 'roof'));
+  return P;
+}
+
+/* ---- 3. globe with arcs to the diaspora ---- */
+const ll = (lat, lon, r) => { const a = lat * Math.PI / 180, b = lon * Math.PI / 180; return [r * Math.cos(a) * Math.sin(b), r * Math.sin(a), r * Math.cos(a) * Math.cos(b)]; };
+function buildGlobe() {
+  const R = 2.3, P = [], N = 620;
+  for (let i = 0; i < N; i++) {
+    const y = 1 - 2 * (i + .5) / N, r = Math.sqrt(1 - y * y), phi = i * 2.399963, lat = Math.asin(y), lon = Math.atan2(Math.sin(phi), Math.cos(phi));
+    const m = Math.sin(lon * 2 + lat * 3) + .8 * Math.sin(lon * 3.7 - lat * 2.1) + .6 * Math.sin(lon * 1.3 + lat * 5);
+    if (m < -.25) continue;
+    P.push(Dp([R * r * Math.cos(phi), R * y, R * r * Math.sin(phi)], 1.5, 'acc', .85));
+  }
+  for (let la = -60; la <= 60; la += 30) for (let lo = 0; lo < 360; lo += 10) P.push(Lp([ll(la, lo, R), ll(la, lo + 10, R)], 'ink', .13, 1));
+  for (let lo = 0; lo < 360; lo += 30) for (let la = -80; la < 80; la += 10) P.push(Lp([ll(la, lo, R), ll(la + 10, lo, R)], 'ink', .13, 1));
+  const D = [33.51, 36.29], dest = [[25.2, 55.3], [24.7, 46.7], [52.5, 13.4], [59.3, 18.1], [48.9, 2.35], [51.5, -.1], [43.7, -79.4], [41, 29], [35.7, 51.4]];
+  const A = ll(D[0], D[1], 1); P.arcs = [];
+  dest.forEach(([la, lo]) => {
+    const B = ll(la, lo, 1), th = Math.acos(Math.max(-1, Math.min(1, v3.dot(A, B)))), pts = [];
+    for (let i = 0; i <= 34; i++) {
+      const t = i / 34, k1 = Math.sin((1 - t) * th) / Math.sin(th), k2 = Math.sin(t * th) / Math.sin(th);
+      const q = [A[0] * k1 + B[0] * k2, A[1] * k1 + B[1] * k2, A[2] * k1 + B[2] * k2], l = Math.hypot(q[0], q[1], q[2]), rr = R * (1 + .3 * Math.sin(Math.PI * t) * Math.min(1, th * .9));
+      pts.push([q[0] / l * rr, q[1] / l * rr, q[2] / l * rr]);
+    }
+    P.arcs.push(pts);
+    for (let i = 0; i < pts.length - 1; i++) P.push(Lp([pts[i], pts[i + 1]], 'acc2', .7, 1.3));
+    P.push(Dp(pts[pts.length - 1], 2.4, 'acc2', .95));
+  });
+  P.pin = ll(D[0], D[1], R); P.R = R; P.lon = D[1];
+  return P;
+}
+
+/* ---- 4. tunnel of gates (drawn directly, no mesh) ---- */
+function drawTunnel(now) {
+  paintBg();
+  const t = sceneT(now), N = 30, f = Math.min(W, H * .62) * 1.05;
+  const vx = W / 2 + STEER.x * W * .14, vy = H * .62 + STEER.y * H * .05;
+  const [ar, ag, ab] = THEME.accRgb, [br, bg2, bb] = THEME.acc2Rgb;
+  const gl = ctx.createRadialGradient(vx, vy, 4, vx, vy, H * .22);
+  gl.addColorStop(0, `rgba(${br},${bg2},${bb},.55)`); gl.addColorStop(1, `rgba(${ar},${ag},${ab},0)`);
+  ctx.fillStyle = gl; ctx.fillRect(0, 0, W, H);
+  const rings = [];
+  for (let i = 0; i < N; i++) rings.push({ i, d: (((i - t * 2.6) % N) + N) % N + .4 });
+  rings.sort((a, b) => b.d - a.d);
+  let prev = null;
+  for (const r of rings) {
+    const d = r.d, k = f * .6 / d, s = 1.5 * k, roll = t * .18 + STEER.x * .45 + d * .1;
+    const px = vx + Math.sin(d * .3 - t * .7) * k * .5, py = vy + Math.cos(d * .27 - t * .55) * k * .28;
+    const a = Math.pow(Math.max(0, 1 - d / N), 1.25) * Math.min(1, (d - .4) / 2.6);
+    const cs = [0, 1, 2, 3].map(q => { const an = roll + q * Math.PI / 2 + Math.PI / 4; return [px + Math.cos(an) * s * 1.41, py + Math.sin(an) * s * 1.41]; });
+    if (prev && prev.d - d < 1.6) {
+      ctx.strokeStyle = `rgba(${ar},${ag},${ab},${(a * .35).toFixed(3)})`; ctx.lineWidth = 1; ctx.beginPath();
+      cs.forEach((c, q) => { ctx.moveTo(prev.cs[q][0], prev.cs[q][1]); ctx.lineTo(c[0], c[1]); }); ctx.stroke();
+    }
+    const hot = r.i % 5 === 0;
+    ctx.beginPath(); cs.forEach((c, q) => q ? ctx.lineTo(c[0], c[1]) : ctx.moveTo(c[0], c[1])); ctx.closePath();
+    ctx.fillStyle = `rgba(${ar},${ag},${ab},${(a * .04).toFixed(3)})`; ctx.fill();
+    ctx.strokeStyle = hot ? `rgba(${br},${bg2},${bb},${(a * .95).toFixed(3)})` : `rgba(${ar},${ag},${ab},${(a * .7).toFixed(3)})`;
+    ctx.lineWidth = (hot ? 2 : 1) + 2.5 / d; ctx.stroke();
+    prev = { d, cs };
+  }
+}
+
+/* ---- 5. floating land parcels ---- */
+function tileLocal(kind, seed) {
+  const P = [...box(0, 0, 0, 1.9, .16, 1.9, 'tile')];
+  if (kind === 'land') {
+    P.push(Lp(rectLoop(-.7, -.7, .7, .7, .09), 'acc', .9, 1.3, 1, 1));
+    for (let i = 0; i < 3; i++) P.push(Lp([[-.7, .09, -.3 + i * .3], [-.2, .09, -.4 + i * .3 + seed % 2 * .1], [.3, .09, -.2 + i * .3], [.7, .09, -.35 + i * .3]], 'acc', .4, 1));
+    [[-.7, -.7], [.7, -.7], [.7, .7], [-.7, .7]].forEach(([x, z]) => P.push(Lp([[x, .09, z], [x, .42, z]], 'acc2', .9, 1.4), Dp([x, .44, z], 2.2, 'acc2', 1)));
+  } else if (kind === 'villa') {
+    P.push(...box(-.25, .36, 0, .9, .56, .8, 'main', { front: [[0, .02, .25, .25]] }), ...box(-.25, .66, 0, 1.02, .07, .92, 'roof'));
+    P.push(...box(.4, .49, .05, .55, .82, .55, 'main', { front: [[0, .1, .2, .22]] }), ...box(.4, .93, .05, .66, .07, .66, 'roof'));
+    P.push(Fp([[-.5, .09, .6], [.4, .09, .6], [.4, .09, .8], [-.5, .09, .8]], 'water', 1, false));
+  } else if (kind === 'farm') {
+    [[-.5, -.5], [0, -.55], [.5, -.45], [-.45, .1], [.05, .05], [.5, .1]].forEach(([x, z]) => P.push(...tree(x, z, .8 + (seed % 3) * .1)));
+    P.push(...box(-.15, .3, .58, .6, .36, .36, 'main'), ...pyr(-.15, .48, .58, .52, .3, 'roof'));
+  } else {
+    P.push(...box(0, .72, 0, .8, 1.28, .8, 'main', { front: [[-.2, .35, .22, .2], [.2, .35, .22, .2], [-.2, 0, .22, .2], [.2, 0, .22, .2], [-.2, -.35, .22, .2], [.2, -.35, .22, .2]] }), ...box(0, 1.4, 0, .92, .07, .92, 'roof'));
+  }
+  return P;
+}
+const TILE_KINDS = ['land', 'villa', 'farm', 'apt', 'land', 'villa', 'farm'];
+function plotPrims(t) {
+  const P = [];
+  for (let i = 0; i < 7; i++) {
+    const a = i / 7 * Math.PI * 2, R = 3.3, tx = Math.cos(a) * R, tz = Math.sin(a) * R, ty = Math.sin(t * .9 + i * 1.3) * .22 + (i % 2 ? .3 : 0);
+    const sp = t * .25 + i, c = Math.cos(sp), s = Math.sin(sp);
+    const T = p => [p[0] * c + p[2] * s + tx, p[1] + ty, -p[0] * s + p[2] * c + tz];
+    const local = cached('tile' + i, () => tileLocal(TILE_KINDS[i], i));
+    for (const q of local) {
+      const nq = { ...q, p: Array.isArray(q.p[0]) ? q.p.map(T) : T(q.p) };
+      if (q.kids) nq.kids = q.kids.map(kq => ({ ...kq, p: kq.p.map(T) }));
+      P.push(nq);
+    }
+    P.push(Lp([[tx, ty - .1, tz], [tx * .55, -1.6, tz * .55]], 'acc', .16, 1, 0, 1));
+  }
+  const ring = []; for (let i = 0; i <= 64; i++) { const a = i / 64 * Math.PI * 2; ring.push([Math.cos(a) * 3.3, -1.6, Math.sin(a) * 3.3]); }
+  P.push(Lp(ring, 'acc', .3, 1.2, 0, 1), Lp(ring.map(p => [p[0] * .55, p[1], p[2] * .55]), 'acc', .2, 1, 0));
+  return P;
+}
+
+/* ---- 6. olive grove flight ---- */
+function grovePrims(t) {
+  const P = [], cols = [-4.2, -3.3, -2.4, -1.5, 1.5, 2.4, 3.3, 4.2], rows = 16, span = rows * 1.6;
+  for (let x = -6; x <= 6; x += 1.4) P.push(Lp([[x, 0, -16], [x, 0, 9]], 'ink', .08, 1, 0));
+  for (let r = 0; r < rows; r++) { const z = (((r * 1.6 - t * 1.5) % span) + span) % span - 15; P.push(Lp([[-6.5, 0, z], [6.5, 0, z]], 'ink', .07, 1, 0)); }
+  P.push(Lp([[-.75, 0, -16], [-.75, 0, 9]], 'acc2', .7, 1.4, 0), Lp([[.75, 0, -16], [.75, 0, 9]], 'acc2', .7, 1.4, 0));
+  for (let k = 0; k < 14; k++) { const z = (((k * 2 - t * 3) % 28) + 28) % 28 - 16; P.push(Lp([[0, 0, z], [0, 0, z + .8]], 'acc', .6, 2, 0)); }
+  for (let r = 0; r < rows; r++) {
+    const z = (((r * 1.6 - t * 1.5) % span) + span) % span - 15;
+    if (z > 6.4) continue;
+    cols.forEach((x, c) => { const j = Math.sin(r * 12.9 + c * 78.2) * .25, h = 1.3 + (Math.sin(r * 3.1 + c * 5.3) + 1) * .25; P.push(...tree(x + j, z + j * .6, h)); });
+  }
+  return P;
+}
+
+/* ---- scene registry ---- */
+var SCENES = {
+  terrain: { name: 'تضاريس حيّة', note: 'المس الأرض', hint: 'المس الأرض', icon: '<path d="M3 17c3-5 5-5 8-1s5 3 10-4M3 12c3-4 5-4 8-1s5 2 10-3M3 21h18"/>', draw: now => drawTerrain(now) },
+  villa: { name: 'فيلا بمسبح', note: 'اسحب لتدويرها', hint: 'اسحب لتدوير الفيلا', icon: '<path d="M3 21V11l6-4 6 4v10M15 21v-7l6-3v10M3 21h18"/>',
+    draw(now) { paintBg(); stepYaw(.0032); cam(12.5, .8, .64, .4 + STEER.y * .05); draw3d(cached('villa', buildVilla)); } },
+  district: { name: 'حي سكني', note: 'نظرة من الأعلى', hint: 'اسحب لتدوير الحي', icon: '<path d="M4 20V10h5v10M10 20V4h5v16M16 20v-7h4v7M2 20h20"/>',
+    draw(now) {
+      paintBg(); stepYaw(.0026); cam(14, .9, .64, .62 + STEER.y * .05);
+      const G = cached('district', buildDistrict), t = sceneT(now), [hx, hz] = G.hl, ph = (t * .7) % 1, ring = [];
+      for (let i = 0; i <= 28; i++) { const a = i / 28 * Math.PI * 2; ring.push([hx + Math.cos(a) * (.6 + ph * 1.3), .03, hz + Math.sin(a) * (.6 + ph * 1.3)]); }
+      draw3d([...G, Lp(ring, 'acc2', (1 - ph) * .9, 1.6, 0), Lp([[hx, .7, hz], [hx, 2.1 + Math.sin(t * 3) * .05, hz]], 'acc2', .95, 1.6), Dp([hx, 2.15 + Math.sin(t * 3) * .05, hz], 5, 'acc2', 1)]);
+    } },
+  globe: { name: 'كرة أرضية', note: 'المغتربون حول العالم', hint: 'اسحب لتدوير الكرة', icon: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+    draw(now) {
+      paintBg(); stepYaw(.0028); cam(9, 1.75, .64, .3 + STEER.y * .05);
+      const G = cached('globe', buildGlobe), t = sceneT(now), rad = G.R * S3.f / Math.sqrt(S3.dist * S3.dist - G.R * G.R);
+      const gr = ctx.createRadialGradient(S3.cx - rad * .3, S3.cy - rad * .35, rad * .1, S3.cx, S3.cy, rad);
+      gr.addColorStop(0, COL('acc', .1)); gr.addColorStop(1, COL('acc', .02));
+      ctx.beginPath(); ctx.arc(S3.cx, S3.cy, rad, 0, 6.2832); ctx.fillStyle = gr; ctx.fill(); ctx.strokeStyle = COL('acc', .35); ctx.lineWidth = 1.2; ctx.stroke();
+      const dyn = [], ph = (t * .8) % 1;
+      G.arcs.forEach((a, i) => { const u = (((t * .32 + i * .137) % 1) + 1) % 1 * (a.length - 1); dyn.push(Dp(a[Math.min(a.length - 1, Math.floor(u))], 3.2, 'ink', 1)); });
+      const p = G.pin; dyn.push(Dp(p, 4.5, 'acc2', 1));
+      for (let k = 0; k < 2; k++) { const q = (ph + k * .5) % 1, ring = []; for (let i = 0; i <= 24; i++) { const a = i / 24 * Math.PI * 2, r = .1 + q * .5, up = [p[0] / G.R, p[1] / G.R, p[2] / G.R]; const e1 = v3.cross(up, [0, 1, 0]), l1 = Math.hypot(...e1) || 1, e2 = v3.cross(up, e1); ring.push([p[0] * 1.005 + (e1[0] / l1 * Math.cos(a) + e2[0] / l1 * Math.sin(a)) * r, p[1] * 1.005 + (e1[1] / l1 * Math.cos(a) + e2[1] / l1 * Math.sin(a)) * r, p[2] * 1.005 + (e1[2] / l1 * Math.cos(a) + e2[2] / l1 * Math.sin(a)) * r]); } dyn.push(Lp(ring, 'acc2', (1 - q) * .9, 1.5)); }
+      draw3d([...G, ...dyn], { dimBack: G.R });
+    } },
+  tunnel: { name: 'بوابات', note: 'ممرّ يجذبك للداخل', hint: 'حرّك إصبعك لتوجيه الممر', icon: '<rect x="3" y="3" width="18" height="18"/><rect x="7" y="7" width="10" height="10"/><rect x="10" y="10" width="4" height="4"/>', draw: now => drawTunnel(now) },
+  plots: { name: 'قطع أراضٍ عائمة', note: 'أرض · فيلا · مزرعة · شقة', hint: 'اسحب لتدوير القطع', icon: '<path d="M12 3l7 4-7 4-7-4zM5 12l7 4 7-4M5 17l7 4 7-4"/>',
+    draw(now) { paintBg(); stepYaw(.0035); cam(12.8, 1.4, .64, .44 + STEER.y * .05); draw3d(plotPrims(sceneT(now))); } },
+  grove: { name: 'بستان زيتون', note: 'طيران فوق الأشجار', hint: 'حرّك إصبعك لتوجيه الطريق', icon: '<path d="M12 21v-6M12 3l5 7h-3l4 6H6l4-6H7z"/>',
+    draw(now) { paintBg(); S3.yaw = STEER.x * .42; cam(8.4, 1.25, .7, .17 + STEER.y * .05); draw3d(grovePrims(sceneT(now)), { fog: [4, 21] }); } }
+};
+var SCENE_KEY = 'terrain';
+function applyScene(key, save = true) {
+  if (!SCENES[key]) key = 'terrain';
+  SCENE_KEY = key; SCENE_T0 = performance.now(); S3.vyaw = 0; staticDirty = true;
+  S3.yaw = key === 'globe' ? -36.29 * Math.PI / 180 : key === 'villa' ? .7 : key === 'district' ? .8 : 0;
+  const h = document.getElementById('thint'); h.innerHTML = '<i></i>' + SCENES[key].hint; h.style.opacity = 1;
+  clearTimeout(applyScene.tm); applyScene.tm = setTimeout(() => { h.style.opacity = 0; }, 6500);
+  if (save) {
+    try { localStorage.setItem('mk-scene', key); } catch (e) {}
+    const u = new URL(location.href); u.searchParams.set('s', key); history.replaceState(history.state, '', u);
+  }
+  renderPalList();
+}
+(function initScene() {
+  let k = new URL(location.href).searchParams.get('s');
+  if (!k) { try { k = localStorage.getItem('mk-scene'); } catch (e) {} }
+  applyScene(k || 'terrain', false);
+})();
 
 /* ================= marquee driven by scroll speed ================= */
 function fillMarquee(el, outline) {
@@ -701,7 +1043,7 @@ addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') setTimeout((
 
 /* ================= palette switcher ================= */
 $('palBtn').onclick = () => { const o = $('pal').classList.toggle('open'); $('palBtn').setAttribute('aria-expanded', o); if (o) loadFontSamples(); };
-$('palList').onclick = e => { const b = e.target.closest('.sw'); if (b) return applyPalette(b.dataset.p); const f = e.target.closest('.fp'); if (f) applyFont(f.dataset.f); };
+$('palList').onclick = e => { const sc = e.target.closest('.sc'); if (sc) return applyScene(sc.dataset.s); const b = e.target.closest('.sw'); if (b) return applyPalette(b.dataset.p); const f = e.target.closest('.fp'); if (f) applyFont(f.dataset.f); };
 
 /* ================= one loop for everything ================= */
 let REVEAL = [], COUNTS = [], ROWSEL = [];
@@ -714,9 +1056,10 @@ function frame(now) {
   VEL += (dv - VEL) * .15;
   document.documentElement.style.setProperty('--navbg', clamp(y / (vh * .4)).toFixed(3));
   document.documentElement.style.setProperty('--dock', clamp((y - vh * .7) / (vh * .3)).toFixed(3));
-  tiltX += (tiltTarget - tiltX) * .05;
+  DT = dt; tiltX += (tiltTarget - tiltX) * .05;
+  STEER.x += (STEER.tx - STEER.x) * .08; STEER.y += (STEER.ty - STEER.y) * .08;
   heroVisible = y < vh * 1.05;
-  if (heroVisible && !reduce) drawTerrain(now);
+  if (heroVisible) { if (!reduce) SCENES[SCENE_KEY].draw(now); else if (staticDirty) { staticDirty = false; SCENES[SCENE_KEY].draw(now); } }
   if (!reduce) {
     $('hcopy').style.transform = `translateY(${y * .4}px)`; $('hcopy').style.opacity = 1 - clamp(y / (vh * .7));
     const sp = 1.2 + Math.abs(VEL) * .9, dir = VEL < -.2 ? -1 : 1;
@@ -744,7 +1087,7 @@ function frame(now) {
   }
   requestAnimationFrame(frame);
 }
-addEventListener('resize', resize);
+addEventListener('resize', () => { resize(); staticDirty = true; });
 
 fetch('../data.json', { cache: 'no-cache' }).then(r => r.json()).then(d => {
   DATA = d.filter(x => x && x.code);
