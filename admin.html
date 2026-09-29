@@ -138,7 +138,7 @@ fieldset.private legend{color:var(--danger)}
 .hint{font-size:12.5px;color:var(--muted);font-weight:500;line-height:1.55}
 input[type=text],input[type=number],input[type=password],select,textarea{width:100%;background:rgba(3,20,14,.45);
   color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
-input[type=number]{font-variant-numeric:tabular-nums}
+input[type=number],input[inputmode=decimal]{font-variant-numeric:tabular-nums}
 textarea{min-height:70px;resize:vertical}
 select{cursor:pointer}
 option{background:#0a2e24;color:var(--ink)}
@@ -404,10 +404,10 @@ option{background:#0a2e24;color:var(--ink)}
           <div class="seg-btn" id="unitSeg" role="group" aria-label="وحدة المساحة">
             <button type="button" data-u="dunam" aria-pressed="true">دنم</button>
             <button type="button" data-u="m2" aria-pressed="false">م²</button></div>
-          <input type="number" id="f_land" min="0" step="any" placeholder="5">
+          <input type="text" inputmode="decimal" autocomplete="off" id="f_land" placeholder="5">
           <span class="hint" id="landHint">اكتب 5 يعني 5 دنم.</span></div>
         <div class="f"><label for="f_bua">مساحة البناء (م²)</label>
-          <input type="number" id="f_bua" min="0" step="any" placeholder="250">
+          <input type="text" inputmode="decimal" autocomplete="off" id="f_bua" placeholder="250">
           <span class="hint">للفلل والشقق. اتركها فاضية للأراضي.</span></div>
       </div>
     </fieldset>
@@ -420,7 +420,7 @@ option{background:#0a2e24;color:var(--ink)}
             <button type="button" data-m="للدنم" aria-pressed="false">سعر الدنم</button>
             <button type="button" data-m="مقطوع" aria-pressed="true">سعر مقطوع</button></div></div>
         <div class="f"><label for="f_price">السعر بالدولار</label>
-          <input type="number" id="f_price" min="0" step="any" placeholder="300000"></div>
+          <input type="text" inputmode="decimal" autocomplete="off" id="f_price" placeholder="300000"></div>
       </div>
       <div class="total" style="margin-top:14px"><span class="lbl">الإجمالي:</span><span class="big" id="totalVal">—</span></div>
       <div class="fields" style="margin-top:14px">

@@ -14,7 +14,7 @@ const CAT_EN = { "أرض": "land", "فيلا": "villa", "مزرعة": "farm", "�
 const CAT_AR = { land: "أرض", villa: "فيلا", farm: "مزرعة", apt: "شقة" };
 const CATS = ["أرض", "فيلا", "مزرعة", "شقة"];
 
-let CFG = null, ROWS = [], BASE_ROWS = "", editing = null, quickRow = null;
+let CFG = null, ROWS = [], BASE_ROWS = "", PRIV_SHA = null, PRIV_BASE = "", editing = null, quickRow = null;
 let feats = [], photos = [], unit = "dunam", mode = "مقطوع", filter = "all", query = "";
 let newBlobs = {};   /* مسار الملف -> base64 لصور لم تُرفع بعد */
 
@@ -61,6 +61,22 @@ function b64(bytes) {
   return btoa(s);
 }
 const b64text = t => b64(new TextEncoder().encode(t));
+
+/* ===== الأرقام: العربية (٠-٩) والفارسية تتحوّل للاتينية، وتُفهم الفواصل ===== */
+function toLatinDigits(s) {
+  return String(s == null ? "" : s)
+    .replace(/[٠-٩]/g, c => String(c.charCodeAt(0) - 0x660))
+    .replace(/[۰-۹]/g, c => String(c.charCodeAt(0) - 0x6F0))
+    .replace(/٫/g, ".").replace(/[٬،]/g, ",");
+}
+/** "٢٥٠٬٠٠٠" أو "250,000" أو "1,5" أو "2.5" → رقم، وإلا NaN */
+function parseNum(s) {
+  let t = toLatinDigits(s).replace(/[\s\u00a0\u200e\u200f]/g, "");
+  if (!t) return NaN;
+  if (/^\d+,\d{1,2}$/.test(t)) t = t.replace(",", ".");   /* فاصلة عشرية: 1,5 */
+  else t = t.replace(/,/g, "");                               /* فاصلة آلاف: 250,000 */
+  return /^(\d+\.?\d*|\.\d+)$/.test(t) ? parseFloat(t) : NaN;
+}
 const unb64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 const b64url = bytes => b64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 const unb64url = s => unb64(s.replace(/-/g, "+").replace(/_/g, "/"));
@@ -131,11 +147,16 @@ async function gh(path, opts) {
 }
 const ghPost = (p, body) => gh(p, { method: "POST", body: JSON.stringify(body) });
 
-async function readJson(repo, file) {
+/** ملف JSON مع بصمته (sha): البصمة تكشف إن تغيّر الملف من جهاز آخر */
+async function readFile(repo, file) {
   const res = await gh(`/repos/${CFG.owner}/${repo}/contents/${file}`);
   if (!res) return null;
   const txt = new TextDecoder().decode(Uint8Array.from(atob(res.content.replace(/\n/g, "")), c => c.charCodeAt(0)));
-  return JSON.parse(txt);
+  return { json: JSON.parse(txt), sha: res.sha || null };
+}
+async function readJson(repo, file) {
+  const f = await readFile(repo, file);
+  return f ? f.json : null;
 }
 
 /** ملف خام من مستودع (الصور في المستودع الخاص، تُقرأ بمفتاحك فقط) */
@@ -178,7 +199,7 @@ async function pool(items, n, fn) {
 /** commit واحد يحمل كل الملفات المتغيّرة فقط. files: [{path, content|b64}] ، deletes: [مسار]
     النص يُرسل داخل الشجرة مباشرة (طلب واحد لكل النصوص)، والملفات الثنائية بالتوازي.
     يرجع null إن لم يتغيّر شيء. */
-async function commit(repo, files, message, deletes, snap) {
+async function commit(repo, files, message, deletes, snap, retried) {
   const o = CFG.owner;
   snap = snap || await repoTree(repo);
   const tree = [], bins = [];
@@ -196,7 +217,13 @@ async function commit(repo, files, message, deletes, snap) {
 
   const newTree = await ghPost(`/repos/${o}/${repo}/git/trees`, { base_tree: snap.base, tree });
   const c = await ghPost(`/repos/${o}/${repo}/git/commits`, { message, tree: newTree.sha, parents: [snap.head] });
-  await gh(`/repos/${o}/${repo}/git/refs/heads/main`, { method: "PATCH", body: JSON.stringify({ sha: c.sha }) });
+  try {
+    await gh(`/repos/${o}/${repo}/git/refs/heads/main`, { method: "PATCH", body: JSON.stringify({ sha: c.sha }) });
+  } catch (e) {
+    /* الفرع تحرّك أثناء النشر (تعديل من مكان آخر): نعيد اللقطة ونحاول مرة واحدة تلقائياً */
+    if (!retried && /fast.?forward/i.test(e.message)) return commit(repo, files, message, deletes, null, true);
+    throw e;
+  }
   return { sha: c.sha, changed: tree.length };
 }
 
@@ -1242,7 +1269,7 @@ function nextPhotoPath(code) {
 }
 async function addPhotos(files) {
   if (!files.length) return;
-  const code = (quickRow ? quickRow.code : $("f_code").value.trim().toUpperCase());
+  const code = (quickRow ? quickRow.code : toLatinDigits($("f_code").value).trim().toUpperCase());
   if (!/^MK-\d{3}$/.test(code)) {
     const s = upStat(); s.hidden = false; s.className = "upstat bad";
     s.textContent = "اكتب كود العقار أولاً.";
@@ -1312,12 +1339,12 @@ function drawFeats() {
 }
 const landToInput = m2 => !m2 ? "" : (unit === "dunam" ? String(+(m2 / 1000).toFixed(3)) : String(m2));
 function inputToM2() {
-  const v = parseFloat($("f_land").value);
+  const v = parseNum($("f_land").value);
   if (!isFinite(v) || v <= 0) return null;
   return Math.round(unit === "dunam" ? v * 1000 : v);
 }
 function updateTotal() {
-  const m2 = inputToM2() || 0, price = parseFloat($("f_price").value) || 0;
+  const m2 = inputToM2() || 0, price = parseNum($("f_price").value) || 0;
   const t = mode === "للدنم" ? price * m2 / 1000 : price;
   $("totalVal").textContent = t > 0 ? money(t) : "—";
 }
@@ -1360,20 +1387,38 @@ function openForm(r) {
   updateTotal();
   $("dlg").showModal();
 }
+/** فحص سعر شاذّ عن باقي عقاراتك: يمنع "صفرين زيادة" من الوصول للموقع دون انتباه */
+function priceSanity(b) {
+  if (b.confirmed === false) return null;
+  const total = totalOf(b);
+  if (!(total > 0)) return null;
+  const perDunam = x => x.cat === "أرض" && +x.area_m2 > 0;
+  const metric = x => perDunam(x) ? totalOf(x) / (x.area_m2 / 1000) : totalOf(x);
+  const m = metric(b), what = perDunam(b) ? "سعر الدنم" : "السعر";
+  if (total < 5000) return `الإجمالي ${money(total)} فقط — رقم صغير جداً`;
+  const peers = ROWS.filter(r => r.code !== b.code && r.cat === b.cat && r.confirmed !== false && totalOf(r) > 0)
+    .map(metric).sort((x, y) => x - y);
+  if (peers.length >= 2) {
+    const med = peers[peers.length >> 1];
+    if (m > med * 4 || m < med / 4) return `${what} ${money(m)}، بينما عقاراتك المشابهة (${b.cat}) حوالي ${money(med)}`;
+  }
+  if (total >= 5e7) return `الإجمالي ${money(total)} — مبلغ ضخم جداً`;
+  return null;
+}
 function fail(msg, focus) {
   const e = $("err"); e.textContent = msg; e.hidden = false;
   if (focus) $(focus).focus();
 }
 function save() {
-  const code = $("f_code").value.trim().toUpperCase();
+  const code = toLatinDigits($("f_code").value).trim().toUpperCase();
   if (!/^MK-\d{3}$/.test(code)) return fail("الكود لازم يكون بصيغة MK-022.", "f_code");
   if (!editing && ROWS.some(r => r.code === code)) return fail("الكود " + code + " مستعمل من قبل.", "f_code");
   const title = $("f_title").value.trim();
   if (!title) return fail("اكتب عنوان العقار.", "f_title");
-  const m2 = inputToM2(), bua = parseFloat($("f_bua").value);
+  const m2 = inputToM2(), bua = parseNum($("f_bua").value);
   if (!m2 && !(isFinite(bua) && bua > 0)) return fail("لازم مساحة أرض أو مساحة بناء.", "f_land");
-  const price = parseFloat($("f_price").value);
-  if (!isFinite(price) || price <= 0) return fail("اكتب السعر.", "f_price");
+  const price = parseNum($("f_price").value);
+  if (!isFinite(price) || price <= 0) return fail("اكتب السعر بأرقام (مثلاً 250000).", "f_price");
   if (mode === "للدنم" && !m2) return fail("سعر الدنم بدّو مساحة أرض.", "f_land");
 
   const body = {
@@ -1386,6 +1431,13 @@ function save() {
     commission: $("p_comm").value.trim(), src_notes: $("p_notes").value.trim(),
     updatedAt: new Date().toISOString()
   };
+  /* السعر لم يتغيّر في تعديل عقار قائم؟ لا نزعجك بالتنبيه */
+  const same = editing && +editing.price === body.price && editing.mode === body.mode
+    && +editing.area_m2 === +body.area_m2 && editing.cat === body.cat;
+  if (!same) {
+    const warn = priceSanity(body);
+    if (warn && !confirm("⚠️ دقّق السعر:\n" + warn + "\n\nموافق = احفظ كما هو\nإلغاء = ارجع وعدّل")) return;
+  }
   if (editing) Object.assign(editing, body);
   else { body._new = true; ROWS.push(body); }
   $("dlg").close();
@@ -1399,11 +1451,46 @@ function removeIt() {
   render();
 }
 
+/* ===== دمج تعديلات جهاز آخر =====
+   لو فتحت اللوحة على جهازين ونشرت من أحدهما، النشر من الثاني ما بيمحو شي: نقارن كل عقار
+   بثلاث نسخ (وقت الفتح · نسختك · اللي على GitHub الآن) ونأخذ من كل طرف ما غيّره. */
+const rowKey = r => r ? JSON.stringify(Object.assign({}, r, { _new: undefined })) : "";
+function mergeRows(base, ours, theirs) {
+  const B = new Map(base.map(r => [r.code, r])), O = new Map(ours.map(r => [r.code, r])), T = new Map(theirs.map(r => [r.code, r]));
+  const order = ours.map(r => r.code).concat(theirs.map(r => r.code).filter(c => !O.has(c)));
+  const rows = [], taken = [], conflicts = [];
+  for (const code of order) {
+    const b = B.get(code), o = O.get(code), t = T.get(code);
+    const oc = rowKey(o) !== rowKey(b), tc = rowKey(t) !== rowKey(b);
+    if (!tc) { if (o) rows.push(o); }                       /* الطرف الآخر ما لمسه */
+    else if (!oc) { if (t) rows.push(t); taken.push(code); } /* أنت ما لمسته: نأخذ نسخته */
+    else if (rowKey(o) === rowKey(t)) { if (o) rows.push(o); } /* غيّرتماه بنفس الشكل */
+    else { conflicts.push(code); if (o) rows.push(o); }      /* تعديلان مختلفان: نسختك هي المعتمدة بعد سؤالك */
+  }
+  return { rows, taken, conflicts };
+}
+/** يرجع null إن لم يتغيّر شي بالمستودع، وإلا يدمج ويحدّث ROWS ويرجع ملخّصاً؛ يرمي خطأ إن ألغيت */
+async function syncWithRemote() {
+  const remote = await readFile(CFG.priv, "private.json");
+  const sha = remote ? remote.sha : null;
+  if (sha === PRIV_SHA) return null;
+  const theirs = remote ? remote.json : [];
+  const m = mergeRows(JSON.parse(PRIV_BASE), ROWS, theirs);
+  if (m.conflicts.length && !confirm("تعديلات من جهاز آخر على نفس العقارات التي عدّلتها هنا:\n" + m.conflicts.join("، ")
+      + "\n\nموافق = تعتمد نسختك لهذه العقارات\nإلغاء = يتوقف النشر وما يتغيّر شي")) {
+    throw new Error("توقّف النشر بسبب تعارض مع تعديلات جهاز آخر. لم يتغيّر شيء.");
+  }
+  ROWS = m.rows; BASE_ROWS = PRIV_BASE = JSON.stringify(theirs); PRIV_SHA = sha;
+  return m;
+}
+
 /* ===== النشر ===== */
 async function publish() {
   if (!isDirty()) return;
   $("pubBtn").disabled = true;
   try {
+    say("جارٍ التأكد من عدم وجود تعديلات من جهاز آخر…", "warn", true);
+    const merged = await syncWithRemote();
     const live = liveRows();
 
     /* روابط صور قديمة (بلا مفتاح تشفير) غير آمنة: تُلغى، ويُنشأ رابط جديد مشفّر عند الطلب */
@@ -1427,8 +1514,10 @@ async function publish() {
     const privDeletes = [...privPaths.keys()].filter(p => p.startsWith("img/") && !usedPhotos.has(p));
     const clean = ROWS.map(r => { const c = Object.assign({}, r); delete c._new; return c; });
     /* بياناتك أولاً: هي الأصل. لو انقطع النت بعدها، ما بتضيع ولا معلومة. */
-    await commit(CFG.priv, [{ path: "private.json", content: JSON.stringify(clean, null, 1) }].concat(privFiles),
+    const privJson = JSON.stringify(clean, null, 1);
+    await commit(CFG.priv, [{ path: "private.json", content: privJson }].concat(privFiles),
       "تحديث بيانات المخزون", privDeletes, privSnap);
+    PRIV_SHA = await gitSha(new TextEncoder().encode(privJson)); PRIV_BASE = JSON.stringify(clean);
 
     say("جارٍ تجهيز صفحات الموقع…", "warn", true);
     const cols = collectionsAll(live);
@@ -1494,9 +1583,12 @@ async function publish() {
     ROWS.forEach(r => { delete r._new; });
     BASE_ROWS = snapshot();
     try { localStorage.removeItem(LS_DRAFT); } catch (e) { }
-    say("اننشر ✓ الموقع بيتحدّث خلال دقيقة" + (unsafe.size ? " (تعذّر ترحيل " + unsafe.size + " صورة)" : ""), unsafe.size ? "warn" : "ok");
-    setTimeout(() => { say("", ""); updateBar(); }, 6000);
+    const took = merged && merged.taken.length;
     render();
+    /* بعد render حتى لا تمحو رسالة النجاح: تبقى ظاهرة (أطول لو دُمجت تعديلات من جهاز آخر) */
+    say("اننشر ✓ الموقع بيتحدّث خلال دقيقة" + (unsafe.size ? " (تعذّر ترحيل " + unsafe.size + " صورة)" : "")
+      + (took ? " · دُمجت تعديلات من جهاز آخر: " + merged.taken.join("، ") : ""), unsafe.size || took ? "warn" : "ok", true);
+    setTimeout(() => { say("", ""); updateBar(); }, took ? 12000 : 6000);
   } catch (e) {
     say("ما زبط النشر: " + e.message, "bad");
     $("pubBtn").disabled = false;
@@ -1509,6 +1601,13 @@ $("closeBtn").addEventListener("click", () => $("dlg").close());
 $("cancelBtn").addEventListener("click", () => $("dlg").close());
 $("saveBtn").addEventListener("click", save);
 $("delBtn").addEventListener("click", removeIt);
+/* أي رقم عربي يُكتب في هذه الحقول يتحوّل فوراً للاتيني ليراه صاحبه */
+for (const id of ["f_land", "f_bua", "f_price", "f_code"]) {
+  $(id).addEventListener("input", ev => {
+    const el = ev.target, v = el.value;
+    if (/[٠-٩۰-۹٫٬،]/.test(v)) { const pos = el.selectionStart; el.value = toLatinDigits(v); try { el.setSelectionRange(pos, pos); } catch (e) { } }
+  });
+}
 $("f_price").addEventListener("input", updateTotal);
 $("f_land").addEventListener("input", updateTotal);
 $("q").addEventListener("input", e => { query = e.target.value; render(); });
@@ -1681,7 +1780,9 @@ async function boot() {
   $("loading").hidden = false;
   $("app").hidden = true;
   try {
-    let rows = await readJson(CFG.priv, "private.json");
+    const pf = await readFile(CFG.priv, "private.json");
+    PRIV_SHA = pf ? pf.sha : null;
+    let rows = pf ? pf.json : null;
     if (!rows) {
       const pub = await readJson(CFG.pub, "data.json");
       rows = pub ? pub.map(p => ({
@@ -1694,6 +1795,7 @@ async function boot() {
     }
     ROWS = rows;
     BASE_ROWS = snapshot();
+    PRIV_BASE = BASE_ROWS;      /* الحالة التي يطابقها sha الملف الخاص: أساس الدمج */
 
     /* مسودّة محفوظة من جلسة سابقة */
     try {
