@@ -179,6 +179,10 @@ option{background:#0a2e24;color:var(--ink)}
 .err{color:var(--danger);font-weight:700;font-size:14px;flex-basis:100%}
 .state{padding:50px 20px;text-align:center;color:var(--ink-2);font-weight:700}
 
+.ver-list{display:flex;flex-direction:column;gap:10px}
+.ver{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;padding:12px 14px;border:1px solid var(--line);border-radius:16px;background:rgba(3,20,14,.35)}
+.ver b{display:block;font-size:15px}
+.ver small{display:block;color:var(--muted);font-weight:700;font-size:13px;line-height:1.6}
 /* بطاقة المنشور */
 .post-wrap{display:grid;grid-template-columns:minmax(220px,1fr) minmax(240px,1fr);gap:18px}
 .post-prev{border:1px solid var(--line);border-radius:18px;overflow:hidden;background:rgba(3,20,14,.4)}
@@ -256,6 +260,7 @@ option{background:#0a2e24;color:var(--ink)}
     </div>
     <div class="top-actions">
       <button class="btn btn-primary" id="addBtn" type="button">+ عقار جديد</button>
+      <button class="btn btn-ghost btn-sm" id="verBtn" type="button">↩︎ النسخ السابقة</button>
       <button class="btn btn-ghost btn-sm" id="outBtn" type="button">إعدادات</button>
     </div>
   </header>
@@ -286,6 +291,20 @@ option{background:#0a2e24;color:var(--ink)}
 
 
 <!-- نافذة الرابط الخاص للصور -->
+<dialog id="verDlg" aria-labelledby="verTitle">
+  <div class="dlg">
+    <div class="dlg-head">
+      <h2 id="verTitle">النسخ السابقة</h2>
+      <button class="x" type="button" id="verClose" aria-label="إغلاق">×</button>
+    </div>
+    <p class="hint" style="margin:0">كل «نشر» بيحفظ نسخة كاملة من مخزونك. اختر نسخة لترجّعها، وما بيتغيّر شي على الموقع قبل ما تضغط «نشر».</p>
+    <div id="verList" class="ver-list"></div>
+    <div class="dlg-foot">
+      <span class="spacer"></span>
+      <button class="btn btn-ghost" type="button" id="verDone">إغلاق</button>
+    </div>
+  </div>
+</dialog>
 <dialog id="galDlg" aria-labelledby="galTitle">
   <div class="dlg">
     <div class="dlg-head">

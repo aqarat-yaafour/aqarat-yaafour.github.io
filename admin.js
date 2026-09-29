@@ -148,8 +148,8 @@ async function gh(path, opts) {
 const ghPost = (p, body) => gh(p, { method: "POST", body: JSON.stringify(body) });
 
 /** ملف JSON مع بصمته (sha): البصمة تكشف إن تغيّر الملف من جهاز آخر */
-async function readFile(repo, file) {
-  const res = await gh(`/repos/${CFG.owner}/${repo}/contents/${file}`);
+async function readFile(repo, file, ref) {
+  const res = await gh(`/repos/${CFG.owner}/${repo}/contents/${file}${ref ? "?ref=" + ref : ""}`);
   if (!res) return null;
   const txt = new TextDecoder().decode(Uint8Array.from(atob(res.content.replace(/\n/g, "")), c => c.charCodeAt(0)));
   return { json: JSON.parse(txt), sha: res.sha || null };
@@ -160,9 +160,9 @@ async function readJson(repo, file) {
 }
 
 /** ملف خام من مستودع (الصور في المستودع الخاص، تُقرأ بمفتاحك فقط) */
-async function ghRaw(repo, path) {
+async function ghRaw(repo, path, ref) {
   try {
-    const r = await fetch(`https://api.github.com/repos/${CFG.owner}/${repo}/contents/${quote(path)}`, {
+    const r = await fetch(`https://api.github.com/repos/${CFG.owner}/${repo}/contents/${quote(path)}${ref ? "?ref=" + ref : ""}`, {
       headers: { Authorization: "Bearer " + CFG.token, Accept: "application/vnd.github.raw+json", "X-GitHub-Api-Version": "2022-11-28" }
     });
     return r.ok ? new Uint8Array(await r.arrayBuffer()) : null;
@@ -1099,8 +1099,54 @@ const liveRows = () => ROWS.filter(r => r.status !== "موقوف")
 const snapshot = () => JSON.stringify(ROWS);
 const isDirty = () => snapshot() !== BASE_ROWS;
 
+/* المسودة: البيانات في localStorage، والصور غير المنشورة في IndexedDB.
+   (حدّ localStorage نحو 5 ميغابايت: مع 10 صور كانت المسودة تضيع بصمت.) */
+let IDBP = null, IDB_OK = true, DRAFT_WARN = false, draftBusy = false, draftAgain = false;
+const idbMirror = new Map();   /* مسار الصورة -> آخر نصّ كُتب في IndexedDB */
+function idbDb() {
+  if (!IDBP) IDBP = new Promise((res, rej) => {
+    if (!window.indexedDB) return rej(new Error("no indexedDB"));
+    const q = indexedDB.open("mk_admin", 1);
+    q.onupgradeneeded = () => q.result.createObjectStore("blobs");
+    q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error);
+  });
+  return IDBP;
+}
+const idbDone = tx => new Promise((res, rej) => { tx.oncomplete = () => res(); tx.onerror = tx.onabort = () => rej(tx.error); });
+async function idbSync(blobs) {
+  const db = await idbDb(), tx = db.transaction("blobs", "readwrite"), st = tx.objectStore("blobs");
+  for (const k of [...idbMirror.keys()]) if (!(k in blobs)) { st.delete(k); idbMirror.delete(k); }
+  for (const k in blobs) if (idbMirror.get(k) !== blobs[k]) { st.put(blobs[k], k); idbMirror.set(k, blobs[k]); }
+  await idbDone(tx);
+}
+async function idbLoadAll() {
+  const db = await idbDb(), tx = db.transaction("blobs"), st = tx.objectStore("blobs");
+  const keys = st.getAllKeys(), vals = st.getAll();
+  await idbDone(tx);
+  const o = {}; keys.result.forEach((k, i) => { o[k] = vals.result[i]; });
+  return o;
+}
+async function clearDraft() {
+  try { localStorage.removeItem(LS_DRAFT); } catch (e) { }
+  try { const db = await idbDb(), tx = db.transaction("blobs", "readwrite"); tx.objectStore("blobs").clear(); await idbDone(tx); } catch (e) { }
+  idbMirror.clear();
+}
+function draftWarn(on) { if (DRAFT_WARN !== on) { DRAFT_WARN = on; updateBar(); } }
+async function flushBlobs() {
+  if (draftBusy) { draftAgain = true; return; }
+  if (!Object.keys(newBlobs).length && !idbMirror.size) return;
+  draftBusy = true;
+  try { do { draftAgain = false; await idbSync(newBlobs); } while (draftAgain); draftWarn(false); }
+  catch (e) { idbMirror.clear(); IDB_OK = false; saveDraft(); }   /* IndexedDB غير متاح (تصفح خاص…): نرجع للطريقة القديمة */
+  finally { draftBusy = false; }
+}
 function saveDraft() {
-  try { localStorage.setItem(LS_DRAFT, JSON.stringify({ rows: ROWS, blobs: newBlobs })); } catch (e) { }
+  if (IDB_OK) {
+    try { localStorage.setItem(LS_DRAFT, JSON.stringify({ rows: ROWS, idb: 1 })); } catch (e) { draftWarn(true); return; }
+    flushBlobs();
+  } else {
+    try { localStorage.setItem(LS_DRAFT, JSON.stringify({ rows: ROWS, blobs: newBlobs })); draftWarn(false); } catch (e) { draftWarn(true); }
+  }
 }
 function updateBar() {
   const d = isDirty();
@@ -1110,7 +1156,7 @@ function updateBar() {
   const m = $("pubMsg");
   if (!m.dataset.busy) {
     m.className = "msg" + (d ? " warn" : "");
-    m.textContent = d ? "عندك تعديلات ما اننشرت" : "الموقع محدّث ✓";
+    m.textContent = d ? "عندك تعديلات ما اننشرت" + (DRAFT_WARN ? " · ⚠️ تعذّر حفظ مسودة على هذا الجهاز: انشر الآن ولا تغلق الصفحة" : "") : "الموقع محدّث ✓";
   }
 }
 function say(text, kind, busy) {
@@ -1451,6 +1497,45 @@ function removeIt() {
   render();
 }
 
+/* ===== فحص جودة المخرجات قبل الرفع =====
+   اللوحة هي مولّد الموقع وتنشر مباشرة: أي خلل فيها (أو في تعديل مستقبلي) كان سيصل للزوار.
+   الآن أي مشكلة توقف النشر، والموقع يبقى كما هو. */
+function validateOutput(files, live, cols, pubHas) {
+  const bad = [], add = m => { if (bad.length < 6) bad.push(m); };
+  const byPath = new Map(files.map(f => [f.path, f]));
+  const has = p => byPath.has(p) || pubHas.has(p);
+  for (const f of files) {
+    const p = f.path, c = f.content;
+    if (typeof c !== "string" || p.startsWith(GAL_DIR + "/") || !/\.(html|xml)$/.test(p)) continue;
+    const m = c.match(/undefined|\bNaN\b|\[object /);
+    if (m) add(`${p}: فيه «${m[0]}»`);
+    if (/\.html$/.test(p) && (c.length < 1000 || !/^<!doctype html>/i.test(c))) add(`${p}: صفحة ناقصة`);
+    for (const j of c.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
+      try { JSON.parse(j[1]); } catch (e) { add(`${p}: البيانات المنظمة معطوبة`); }
+    }
+  }
+  const data = byPath.get("data.json");
+  try {
+    const arr = JSON.parse(data.content);
+    if (arr.length !== live.length) add(`data.json فيه ${arr.length} عقار والمتاح ${live.length}`);
+    if (arr.some(x => !x.code || !x.title || !x.area)) add("data.json فيه عقار ناقص (كود أو عنوان أو منطقة)");
+  } catch (e) { add("data.json معطوب"); }
+  const idx = byPath.get("index.html");
+  for (const x of live) {
+    const pg = byPath.get(`listing/${x.code}.html`);
+    if (!pg) { add(`صفحة ${x.code} غير موجودة`); continue; }
+    if (!/<title>[^<]{3,}<\/title>/.test(pg.content)) add(`${x.code}: عنوان الصفحة فارغ`);
+    if (idx && idx.content.indexOf(`listing/${x.code}.html`) < 0) add(`الرئيسية لا تحتوي ${x.code}`);
+    if (x.confirmed !== false && !(isFinite(+x.price) && +x.price > 0)) add(`${x.code}: السعر غير صالح`);
+    const og = (pg.content.match(/og:image" content="[^"]*?\/(og\/[^"]+)"/) || [])[1];
+    if (og && !has(og)) add(`${x.code}: بطاقة المشاركة ناقصة`);
+  }
+  for (const c of cols) if (!byPath.has(c.slug)) add(`صفحة ${c.slug} غير موجودة`);
+  const sm = byPath.get("sitemap.xml");
+  if (sm && (sm.content.match(/<loc>/g) || []).length !== 1 + cols.length + live.length) add("خريطة الموقع لا تطابق الصفحات");
+  if (bad.length) throw new Error("فحص الجودة أوقف النشر (الموقع ما تغيّر): " + bad.join(" · "));
+}
+
 /* ===== دمج تعديلات جهاز آخر =====
    لو فتحت اللوحة على جهازين ونشرت من أحدهما، النشر من الثاني ما بيمحو شي: نقارن كل عقار
    بثلاث نسخ (وقت الفتح · نسختك · اللي على GitHub الآن) ونأخذ من كل طرف ما غيّره. */
@@ -1575,6 +1660,8 @@ async function publish() {
       /* كل صور العقارات تغادر المستودع العام (ما عدا صورتك الشخصية) */
       (p.startsWith("img/") && p !== "img/mohammad-khaled.jpg" && !unsafe.has(p)));
 
+    say("جارٍ فحص الجودة…", "warn", true);
+    validateOutput(files, live, cols, pubHas);
     say("جارٍ الرفع…", "warn", true);
     await commit(CFG.pub, files, "تحديث المخزون من لوحة الإدارة", deletes, pubSnap);
 
@@ -1582,7 +1669,7 @@ async function publish() {
     newBlobs = {};
     ROWS.forEach(r => { delete r._new; });
     BASE_ROWS = snapshot();
-    try { localStorage.removeItem(LS_DRAFT); } catch (e) { }
+    await clearDraft();
     const took = merged && merged.taken.length;
     render();
     /* بعد render حتى لا تمحو رسالة النجاح: تبقى ظاهرة (أطول لو دُمجت تعديلات من جهاز آخر) */
@@ -1737,11 +1824,74 @@ $("qClose").addEventListener("click", () => $("photoDlg").close());
 $("qDone").addEventListener("click", () => $("photoDlg").close());
 $("photoDlg").addEventListener("close", () => { quickRow = null; });
 $("pubBtn").addEventListener("click", publish);
-$("dropBtn").addEventListener("click", () => {
+$("dropBtn").addEventListener("click", async () => {
   if (!confirm("بدك تتراجع عن كل التعديلات اللي ما اننشرت؟")) return;
-  try { localStorage.removeItem(LS_DRAFT); } catch (e) { }
+  await clearDraft();
   location.reload();
 });
+/* ===== النسخ السابقة: كل نشر يحفظ نسخة في المستودع الخاص، ومنها نرجع لأي حالة ===== */
+const dayTxt = iso => new Date(iso).toLocaleString("ar", { dateStyle: "medium", timeStyle: "short" });
+function diffText(cur, ver) {
+  const C = new Map(cur.map(r => [r.code, r])), V = new Map(ver.map(r => [r.code, r]));
+  const back = [...V.keys()].filter(c => !C.has(c)), gone = [...C.keys()].filter(c => !V.has(c));
+  const chg = [...V.keys()].filter(c => C.has(c) && rowKey(C.get(c)) !== rowKey(V.get(c)));
+  const list = a => a.slice(0, 4).join("، ") + (a.length > 4 ? ` و${a.length - 4} غيرها` : "");
+  const parts = [];
+  if (back.length) parts.push("يرجع: " + list(back));
+  if (gone.length) parts.push("يُحذف: " + list(gone));
+  if (chg.length) parts.push("يتغيّر: " + list(chg));
+  return parts.join(" · ");
+}
+async function openVersions() {
+  const box = $("verList");
+  box.textContent = "جارٍ التحميل…";
+  $("verDlg").showModal();
+  try {
+    const list = await gh(`/repos/${CFG.owner}/${CFG.priv}/commits?path=private.json&per_page=10`);
+    const vs = (await pool(list || [], 4, async c => {
+      const f = await readFile(CFG.priv, "private.json", c.sha);
+      return f ? { sha: c.sha, date: c.commit.committer.date, rows: f.json } : null;
+    })).filter(Boolean);
+    const cur = JSON.parse(PRIV_BASE || "[]");
+    box.textContent = "";
+    let shown = 0;
+    for (const v of vs) {
+      const d = diffText(cur, v.rows);
+      if (!d) continue;                       /* نفس الحالة الحالية: ما في شي نرجعه */
+      shown++;
+      const el = document.createElement("div"); el.className = "ver";
+      const txt = document.createElement("div");
+      const b = document.createElement("b"); b.textContent = dayTxt(v.date) + " · " + v.rows.length + " عقار";
+      const sm = document.createElement("small"); sm.textContent = d;
+      txt.appendChild(b); txt.appendChild(sm); el.appendChild(txt);
+      const btn = document.createElement("button"); btn.type = "button"; btn.className = "btn btn-ghost btn-sm"; btn.textContent = "استرجع هذه النسخة";
+      btn.addEventListener("click", () => restoreVersion(v, d));
+      el.appendChild(btn); box.appendChild(el);
+    }
+    if (!shown) box.textContent = "ما في نسخ سابقة مختلفة عن الحالية بعد.";
+  } catch (e) { box.textContent = "ما قدرت أحمّل النسخ: " + e.message; }
+}
+async function restoreVersion(v, d) {
+  if (isDirty() && !confirm("عندك تعديلات ما اننشرت وبتضيع لو رجّعت نسخة قديمة. متأكد؟")) return;
+  if (!confirm("ترجّع نسخة " + dayTxt(v.date) + "؟\n" + d + "\n\nما بيتغيّر شي على الموقع قبل ما تضغط «نشر».")) return;
+  try {
+    /* صور تلك النسخة التي انحذفت من المستودع الخاص بعد نشرات لاحقة: نستعيدها من تاريخ النسخة نفسه */
+    const now = (await repoTree(CFG.priv)).map;
+    const need = [...new Set(v.rows.flatMap(r => r.photos || []))].filter(p => !now.has(p));
+    const back = {}; let lost = 0;
+    await pool(need, 4, async p => { const b = await ghRaw(CFG.priv, p, v.sha); if (b) back[p] = b64(b); else lost++; });
+    for (const p in newBlobs) photoUrls.delete(p);
+    newBlobs = back;
+    ROWS = v.rows.map(r => Object.assign({}, r));
+    $("verDlg").close();
+    render();
+    say("رجّعت نسخة " + dayTxt(v.date) + " — اضغط «نشر» لتطبيقها على الموقع." + (lost ? " (تعذّر استرجاع " + lost + " صورة)" : ""), "warn", true);
+    setTimeout(() => { say("", ""); updateBar(); }, 15000);
+  } catch (e) { alert("ما زبط الاسترجاع: " + e.message); }
+}
+$("verBtn").addEventListener("click", openVersions);
+$("verClose").addEventListener("click", () => $("verDlg").close());
+$("verDone").addEventListener("click", () => $("verDlg").close());
 $("outBtn").addEventListener("click", () => {
   if (isDirty() && !confirm("عندك تعديلات ما اننشرت. بدك تفتح الإعدادات وتخسرها؟")) return;
   openSetup();
@@ -1798,18 +1948,27 @@ async function boot() {
     PRIV_BASE = BASE_ROWS;      /* الحالة التي يطابقها sha الملف الخاص: أساس الدمج */
 
     /* مسودّة محفوظة من جلسة سابقة */
+    let restoreNote = "";
     try {
       const d = JSON.parse(localStorage.getItem(LS_DRAFT) || "null");
       if (d && d.rows && JSON.stringify(d.rows) !== BASE_ROWS) {
         if (confirm("عندك تعديلات ما اننشرت من آخر مرة. بدك ترجّعها؟")) {
           ROWS = d.rows; newBlobs = d.blobs || {};
-        } else localStorage.removeItem(LS_DRAFT);
+          if (d.idb) { try { newBlobs = await idbLoadAll(); } catch (e) { newBlobs = {}; } }
+          for (const k in newBlobs) idbMirror.set(k, newBlobs[k]);
+          /* صور أُضيفت ولم تُنشر ولم نجد بياناتها: نشيلها من العقار بدل ما تبقى مسارات فارغة */
+          const known = new Set(JSON.parse(BASE_ROWS).flatMap(r => r.photos || []));
+          let lost = 0;
+          for (const r of ROWS) r.photos = (r.photos || []).filter(p => { const ok = known.has(p) || newBlobs[p]; if (!ok) lost++; return ok; });
+          if (lost) restoreNote = "رجّعت مسودتك، لكن تعذّر استرجاع " + lost + " صورة (أضفها من جديد).";
+        } else await clearDraft();
       }
     } catch (e) { }
 
     $("loading").hidden = true;
     $("app").hidden = false;
     render();
+    if (restoreNote) { say(restoreNote, "warn", true); setTimeout(() => { say("", ""); updateBar(); }, 12000); }
   } catch (e) {
     /* غالباً تغيّر اسم الحساب أو المستودع — نفتح الإعدادات والمفتاح محفوظ */
     openSetup("ما قدرت أوصل لمستودعاتك: " + e.message + " — دقّق الأسماء تحت واضغط «اتصل».");
