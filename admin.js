@@ -211,8 +211,24 @@ const CHEV_R = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stro
 const CHEV_L = '<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 6l-6 6 6 6"/></svg>';
 
 /* صورة المعاينة عند مشاركة الرابط على واتساب وفيسبوك */
+const OG_V = "1";   /* ارفعه عند تغيير تصميم البطاقة ليُعاد رسمها ويتحدّث كاش واتساب */
+/* بصمة قصيرة (cyrb53) لبيانات البطاقة: تدخل في اسم الملف فيتغيّر الرابط لما يتغيّر السعر أو العنوان
+   (واتساب يحفظ المعاينة حسب الرابط، فبدون هذا يبقى يعرض البطاقة القديمة) */
+function hashStr(str) {
+  let h1 = 0xdeadbeef, h2 = 0x41c6ce57;
+  for (let i = 0; i < str.length; i++) {
+    const c = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ c, 2654435761); h2 = Math.imul(h2 ^ c, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return ((h2 >>> 0).toString(36) + (h1 >>> 0).toString(36)).slice(0, 8);
+}
+const ogPath = x => x
+  ? `og/${x.code}-${hashStr(OG_V + JSON.stringify([x.code, x.cat, x.title, x.area, x.area_m2, x.bua, x.mode, x.price, !!x.nego, x.confirmed !== false]))}.jpg`
+  : `og/site-${OG_V}.jpg`;
 function ogImage(x) {
-  return BASE + "/img/mohammad-khaled.jpg";
+  return `${BASE}/${ogPath(x)}`;
 }
 function headHtml(title, desc, canonical, jsonld, extra, image, bodyCls) {
   const up = canonical.indexOf("/listing/") >= 0 ? "../" : "";
@@ -233,6 +249,9 @@ function headHtml(title, desc, canonical, jsonld, extra, image, bodyCls) {
 <meta property="og:url" content="${canonical}">
 <meta property="og:locale" content="ar_SY">
 <meta property="og:image" content="${og}">
+<meta property="og:image:type" content="image/jpeg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="${og}">
 <link rel="icon" href="${BASE}/favicon.svg" type="image/svg+xml">
@@ -513,7 +532,7 @@ function indexPage(live) {
   const desc = `أراضٍ وفلل ومزارع وشقق للبيع في يعفور وقرى الشام والصبورة بريف دمشق. ${live.length} عقاراً متاحاً مع ${NAME}، ${ROLE} — مرافقة من المعاينة حتى التسجيل. واتساب ${PHONE_LOCAL}.`;
   const jsonld = {
     "@context": "https://schema.org", "@type": "RealEstateAgent", name: NAME, jobTitle: ROLE,
-    url: BASE + "/", telephone: "+" + PHONE_INTL, image: BASE + "/img/mohammad-khaled.jpg", description: desc,
+    url: BASE + "/", telephone: "+" + PHONE_INTL, image: ogImage(null), description: desc,
     areaServed: AREAS.map(a => ({ "@type": "Place", name: a })),
     address: { "@type": "PostalAddress", addressLocality: "يعفور", addressRegion: "ريف دمشق", addressCountry: "SY" },
     knowsLanguage: ["ar"],
@@ -795,6 +814,102 @@ async function drawPostCard(x) {
   ctx.fillText("واتساب · اذكر الكود " + x.code, fx + 30 + telW / 2, fy + 146);
 
   return new Promise(res => c.toBlob(b => res(b), "image/png"));
+}
+
+/* بطاقة المعاينة عند مشاركة الرابط (1200×630): x = عقار، أو null لبطاقة الموقع العامة */
+async function drawOgCard(x) {
+  try {
+    await Promise.all(['400 90px "Lalezar"', '800 40px "Cairo"', '600 30px "Cairo"']
+      .map(f => document.fonts.load(f, "أبجد هوز 0123456789")));
+  } catch (e) { }
+  const av = await loadAvatar();
+  const W = 1200, H = 630, R = W - 72;
+  const c = document.createElement("canvas"); c.width = W; c.height = H;
+  const ctx = c.getContext("2d");
+  const INK = "#f3ecd9", INK2 = "#d2cab2", GOLD = "#e6b84c", GOLD_L = "#f7d37a";
+
+  const bg = ctx.createLinearGradient(0, 0, W, H);
+  bg.addColorStop(0, "#0b3a2d"); bg.addColorStop(1, "#03160f");
+  ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
+  glowBlob(ctx, 1040, 80, 560, "#14775a", .75);
+  glowBlob(ctx, 90, 600, 520, "#0f5a44", .8);
+  /* قطع أراضٍ عائمة كزخرفة خفيفة */
+  [[170, 210, 120], [330, 120, 74], [110, 400, 84]].forEach(([cx, cy, r]) => {
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - r * .5); ctx.lineTo(cx + r, cy); ctx.lineTo(cx, cy + r * .5); ctx.lineTo(cx - r, cy); ctx.closePath();
+    ctx.fillStyle = "rgba(230,184,76,.07)"; ctx.fill();
+    ctx.strokeStyle = "rgba(247,211,122,.32)"; ctx.lineWidth = 2; ctx.stroke();
+  });
+  ctx.strokeStyle = "rgba(247,211,122,.28)"; ctx.lineWidth = 2; rrect(ctx, 22, 22, W - 44, H - 44, 34); ctx.stroke();
+
+  ctx.direction = "rtl"; ctx.textAlign = "right";
+  let ty;
+  if (x) {
+    const [n, u] = sizeOf(x), [main, unit2] = priceTxt(x);
+    const ask = x.confirmed === false;
+    /* شارة النوع + الكود */
+    ctx.font = '800 34px "Cairo"';
+    const pill = `للبيع · ${x.cat}`, pw = ctx.measureText(pill).width + 56;
+    rrect(ctx, R - pw, 58, pw, 60, 30); ctx.fillStyle = "rgba(230,184,76,.16)"; ctx.fill();
+    ctx.strokeStyle = "rgba(247,211,122,.45)"; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = GOLD_L; ctx.textAlign = "center"; ctx.fillText(pill, R - pw / 2, 100);
+    ctx.textAlign = "left"; ctx.direction = "ltr"; ctx.font = '800 30px "Cairo"'; ctx.fillStyle = INK2;
+    ctx.fillText(x.code, W - R, 98);
+    ctx.direction = "rtl"; ctx.textAlign = "right";
+
+    ctx.fillStyle = GOLD; ctx.font = '800 40px "Cairo"';
+    ctx.fillText(`${x.area} · ريف دمشق`, R, 178);
+
+    ctx.fillStyle = INK; ctx.font = '400 92px "Lalezar"';
+    let tl = wrapText(ctx, x.title, 1000), lh = 98, two = false;
+    if (tl.length > 1) { ctx.font = '400 64px "Lalezar"'; tl = wrapText(ctx, x.title, 1000); lh = 70; two = true; }
+    tl = tl.slice(0, 2);
+    ty = two ? 246 : 272;
+    tl.forEach((l, i) => ctx.fillText(l, R, ty + i * lh));
+    ty += (tl.length - 1) * lh;
+
+    ctx.fillStyle = INK2; ctx.font = '600 32px "Cairo"';
+    const extra = [`${n} ${u}`].concat(x.feats || []).slice(0, 4).join("  ·  ");
+    ctx.fillText(fitLine(ctx, extra, 1000), R, ty + (two ? 52 : 62));
+
+    ctx.fillStyle = GOLD_L; ctx.font = `400 ${two ? 80 : 88}px "Lalezar"`;
+    const label = ask ? "السعر عند التواصل" : (unit2 === "للدنم" ? `${main} للدنم` : main);
+    const py = ty + (two ? 132 : 170);
+    ctx.fillText(label, R, py);
+    if (x.nego && !ask) {
+      const lw = ctx.measureText(label).width;
+      ctx.font = '600 30px "Cairo"'; ctx.fillStyle = INK2; ctx.fillText("قابل للتفاوض", R - lw - 26, py - 8);
+    }
+  } else {
+    ctx.fillStyle = GOLD; ctx.font = '800 40px "Cairo"';
+    ctx.fillText("أراضٍ · فلل · مزارع · شقق", R, 150);
+    ctx.fillStyle = INK; ctx.font = '400 100px "Lalezar"';
+    ctx.fillText("عقارات في يعفور", R, 270);
+    ctx.fillText("وقرى الشام", R, 372);
+    ctx.fillStyle = INK2; ctx.font = '600 34px "Cairo"';
+    ctx.fillText("معاينة، تدقيق أوراق، ومرافقة حتى التسجيل", R, 440);
+  }
+
+  /* شريط المستشار */
+  const fy = 506, fh = 92;
+  rrect(ctx, 48, fy, W - 96, fh, 46); ctx.fillStyle = "rgba(3,22,15,.55)"; ctx.fill();
+  ctx.strokeStyle = "rgba(247,211,122,.32)"; ctx.lineWidth = 2; ctx.stroke();
+  const ax = W - 48 - 46, ay = fy + fh / 2;
+  ctx.save(); ctx.beginPath(); ctx.arc(ax, ay, 36, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = "#fff"; ctx.fillRect(ax - 36, ay - 36, 72, 72);
+  if (av) { try { ctx.drawImage(av, ax - 36, ay - 36, 72, 72); } catch (e) { } }
+  ctx.restore();
+  ctx.strokeStyle = GOLD; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(ax, ay, 38, 0, Math.PI * 2); ctx.stroke();
+  ctx.direction = "rtl"; ctx.textAlign = "right";
+  ctx.fillStyle = GOLD_L; ctx.font = '400 40px "Lalezar"'; ctx.fillText(NAME, ax - 56, fy + 46);
+  ctx.fillStyle = INK2; ctx.font = '600 24px "Cairo"'; ctx.fillText(ROLE, ax - 56, fy + 76);
+  ctx.direction = "ltr"; ctx.textAlign = "center"; ctx.font = '800 36px "Cairo"';
+  const tw = ctx.measureText(PHONE_LOCAL).width + 56;
+  rrect(ctx, 70, fy + 14, tw, 64, 32); ctx.fillStyle = GOLD; ctx.fill();
+  ctx.fillStyle = "#1c1403"; ctx.fillText(PHONE_LOCAL, 70 + tw / 2, fy + 58);
+
+  const blob = await new Promise(res => c.toBlob(res, "image/jpeg", 0.88));
+  return new Uint8Array(await blob.arrayBuffer());
 }
 
 let postUrl = null;
@@ -1343,6 +1458,15 @@ async function publish() {
       files.push({ path: binPath(r.galKey), b64: b64(await encryptPhotos(r.galSecret, list)) });
     }
 
+    /* بطاقات المعاينة للمشاركة: اسم الملف فيه بصمة البيانات، فلا يُرسم إلا الجديد أو المتغيّر */
+    const ogKeep = new Set();
+    for (const x of live.concat([null])) {
+      const p = ogPath(x); ogKeep.add(p);
+      if (pubHas.has(p)) continue;
+      say("جارٍ رسم بطاقة المشاركة" + (x ? " " + x.code : "") + "…", "warn", true);
+      files.push({ path: p, b64: b64(await drawOgCard(x)) });
+    }
+
     /* صفحات عقارات ما عادت متاحة (انحذفت أو صارت موقوفة) تُشال من الموقع
        حتى ما يوصلها زبون من جوجل ويتصل على عقار مباع */
     const keep = new Set(live.map(x => `listing/${x.code}.html`));
@@ -1358,6 +1482,7 @@ async function publish() {
       (colNames.has(p) && !colKeep.has(p)) ||
       /* رابط خاص أُبطل أو عقار ما عاد له صور */
       (p.startsWith(GAL_DIR + "/") && /\.(html|bin)$/.test(p) && !galKeep.has(p)) ||
+      (p.startsWith("og/") && !ogKeep.has(p)) ||
       /* كل صور العقارات تغادر المستودع العام (ما عدا صورتك الشخصية) */
       (p.startsWith("img/") && p !== "img/mohammad-khaled.jpg" && !unsafe.has(p)));
 
