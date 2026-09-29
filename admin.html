@@ -86,10 +86,10 @@ header.top .sub{margin:2px 0 0;color:var(--ink-2);font-size:14px}
 .card-open{display:flex;flex-direction:column;gap:6px;padding:16px 18px 10px;border-radius:22px;text-align:start;
   cursor:pointer;color:inherit;width:100%;background:none;border:none;font:inherit}
 .card-acts{display:flex;flex-wrap:wrap;gap:6px;padding:0 16px 14px}
-.card-cam,.card-post,.card-gal{display:inline-flex;align-items:center;gap:5px;background:rgba(3,20,14,.55);
+.card-cam,.card-post,.card-gal,.card-ok,.card-sold{display:inline-flex;align-items:center;gap:5px;background:rgba(3,20,14,.55);
   border:1px solid var(--line);color:var(--gold-light);border-radius:999px;padding:6px 13px;
   font:800 12.5px/1 var(--body);cursor:pointer}
-.card-cam:hover,.card-post:hover,.card-gal:hover{background:rgba(230,184,76,.3);color:var(--ink)}
+.card-cam:hover,.card-post:hover,.card-gal:hover,.card-ok:hover,.card-sold:hover{background:rgba(230,184,76,.3);color:var(--ink)}
 #galLink{width:100%;background:rgba(3,20,14,.5);color:var(--gold-light);border:1px solid var(--line);
   border-radius:14px;padding:12px 14px;font-size:13.5px;direction:ltr}
 .row1{display:flex;align-items:center;gap:8px;justify-content:space-between;flex-wrap:wrap}
@@ -103,6 +103,10 @@ header.top .sub{margin:2px 0 0;color:var(--ink-2);font-size:14px}
 .thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .card h3{margin:2px 0 0;font-family:var(--display);font-size:22px;font-weight:400;line-height:1.35}
 .card .meta{font-size:13.5px;color:var(--muted);font-weight:700}
+.tag.sold{background:rgba(127,224,168,.14);color:var(--ok);border-color:rgba(127,224,168,.4)}
+.card .age{font-size:12.5px;font-weight:700;color:var(--muted)}
+.card .age.stale{color:var(--danger)}
+.card-ok{color:var(--ok)!important;border-color:rgba(127,224,168,.4)!important}
 .card .price{font-size:15px;font-weight:800;color:var(--gold-light);font-variant-numeric:tabular-nums}
 .empty{grid-column:1/-1;padding:44px 16px;text-align:center;color:var(--ink-2);font-weight:700}
 
@@ -136,7 +140,7 @@ fieldset.private legend{color:var(--danger)}
 .f.wide{grid-column:1/-1}
 .f label{font-size:13.5px;font-weight:800;color:var(--ink-2)}
 .hint{font-size:12.5px;color:var(--muted);font-weight:500;line-height:1.55}
-input[type=text],input[type=number],input[type=password],select,textarea{width:100%;background:rgba(3,20,14,.45);
+input[type=text],input[type=number],input[type=password],input[type=date],select,textarea{width:100%;background:rgba(3,20,14,.45);
   color:var(--ink);border:1px solid var(--line);border-radius:14px;padding:10px 14px}
 input[type=number],input[inputmode=decimal]{font-variant-numeric:tabular-nums}
 textarea{min-height:70px;resize:vertical}
@@ -274,6 +278,8 @@ option{background:#0a2e24;color:var(--ink)}
       <button class="chip" type="button" data-f="مزرعة" aria-pressed="false">مزارع</button>
       <button class="chip" type="button" data-f="شقة" aria-pressed="false">شقق</button>
       <button class="chip" type="button" data-f="موقوف" aria-pressed="false">الموقوف</button>
+      <button class="chip" type="button" data-f="stale" aria-pressed="false">لم يُحدَّث</button>
+      <button class="chip" type="button" data-f="مباع" aria-pressed="false">المباع</button>
     </div>
   </div>
 
@@ -457,8 +463,10 @@ option{background:#0a2e24;color:var(--ink)}
           <select id="f_papers"><option value="">غير محدد</option><option>طابو أخضر</option>
             <option>حكم محكمة</option><option>وكالة</option></select></div>
         <div class="f"><label for="f_status">الحالة</label>
-          <select id="f_status"><option>متاح</option><option>موقوف</option></select>
-          <span class="hint">«موقوف» ما بيظهر على الموقع نهائياً.</span></div>
+          <select id="f_status"><option>متاح</option><option>موقوف</option><option>مباع</option></select>
+          <span class="hint">«موقوف» و«مباع» ما بيظهروا على الموقع، ويبقوا محفوظين عندك.</span></div>
+        <div class="f" id="soldBox" hidden><label for="f_sold">تاريخ البيع</label>
+          <input type="date" id="f_sold"></div>
         <div class="f wide"><label for="f_featIn">الميزات</label>
           <div class="feats" id="featBox"><input type="text" id="f_featIn" placeholder="اكتب ميزة واضغط Enter" autocomplete="off"></div></div>
         <div class="f wide"><label for="f_note">ملاحظة للمشتري</label>

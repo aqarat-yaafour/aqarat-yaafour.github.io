@@ -43,10 +43,11 @@ async function open() {
 }
 const bar = p => p.textContent('#pubMsg');
 const waitIdle = async (p, ms = 15000) => { const t0 = Date.now(); while (Date.now() - t0 < ms) { const t = await bar(p); if (/اننشر|ما زبط/.test(t)) return t; await p.waitForTimeout(150); } return await bar(p); };
+let vn = 0;   /* عناوين ومساحات فريدة حتى لا يعتبرها كشف التكرار نسخاً من بعضها */
 async function addVilla(p, price, land = '', mode = null) {
-  await p.click('#addBtn'); await p.waitForSelector('#dlg[open]');
-  await p.selectOption('#f_cat', 'فيلا'); await p.fill('#f_title', 'فيلا اختبار');
-  await p.fill('#f_bua', '300'); await p.fill('#f_price', price); if (land) await p.fill('#f_land', land);
+  vn++; await p.click('#addBtn'); await p.waitForSelector('#dlg[open]');
+  await p.selectOption('#f_cat', 'فيلا'); await p.fill('#f_title', 'فيلا اختبار رقم ' + vn + ' مميزة');
+  await p.fill('#f_bua', String(200 + vn * 111)); await p.fill('#f_price', price); if (land) await p.fill('#f_land', land);
   if (mode) await p.click(`#modeSeg button[data-m="${mode}"]`);
   await p.click('#saveBtn'); await p.waitForTimeout(250);
 }

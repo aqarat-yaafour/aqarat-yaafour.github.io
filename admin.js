@@ -1090,11 +1090,43 @@ function openGallery(r) {
   }
   $("galNew").textContent = key ? "رابط جديد (يُبطل القديم)" : "أنشئ الرابط";
   $("galMsg").hidden = true;
+  $("galNew").disabled = r.status === "مباع";
+  if (r.status === "مباع") { $("galMsg").hidden = false; $("galMsg").className = "upstat"; $("galMsg").textContent = "العقار مباع — رابطه الخاص ما بينشر."; }
   $("galDlg").showModal();
 }
 
 /* ===== حالة التعديلات ===== */
-const liveRows = () => ROWS.filter(r => r.status !== "موقوف")
+/* ===== دورة حياة العقار: متاح · موقوف · مباع ===== */
+const STALE_DAYS = 60;      /* بعد كم يوم بلا تأكيد نطلب مراجعة العقار */
+const isLive = r => r.status !== "موقوف" && r.status !== "مباع";
+const touchedAt = r => Date.parse(r.confirmedAt) || Date.parse(r.updatedAt) || null;
+const ageDays = r => { const t = touchedAt(r); return t ? Math.max(0, Math.floor((Date.now() - t) / 864e5)) : null; };
+const isStale = r => isLive(r) && (ageDays(r) || 0) >= STALE_DAYS;
+const nowIso = () => new Date().toISOString();
+const normTitle = t => String(t || "").replace(/[\s\u064B-\u0652ـ،.\-_]/g, "").toLowerCase();
+/** عقارات تشبه b: نفس النوع والمنطقة، ومساحة وسعر متقاربان (±10%) أو نفس العنوان */
+function findSimilar(b) {
+  const near = (x, y) => x > 0 && y > 0 && Math.abs(x - y) <= 0.1 * Math.max(x, y);
+  return ROWS.filter(r => r.code !== b.code && r.cat === b.cat && r.area === b.area && (
+    normTitle(r.title) === normTitle(b.title) ||
+    (near(+b.area_m2 || +b.bua, +r.area_m2 || +r.bua) && near(totalOf(b), totalOf(r)))));
+}
+function markSold(r) {
+  if (!confirm("«" + r.code + "» صار مباعاً؟\nبيختفي من الموقع بعد «نشر»، وبيبقى محفوظ عندك بتاريخ البيع.")) return;
+  Object.assign(r, { status: "مباع", soldAt: today(), featured: false, updatedAt: nowIso(), confirmedAt: nowIso() });
+  render();
+}
+function markAvailable(r) {
+  if (!confirm("ترجّع «" + r.code + "» متاحاً وينعرض على الموقع بعد «نشر»؟")) return;
+  r.status = "متاح"; delete r.soldAt; r.updatedAt = r.confirmedAt = nowIso();
+  render();
+}
+function confirmFresh(r) {
+  if (!confirm("تؤكد أن «" + r.code + "» ما زال متاحاً وسعره صحيح؟")) return;
+  r.confirmedAt = nowIso();
+  render();
+}
+const liveRows = () => ROWS.filter(isLive)
   .sort((a, b) => a.code.localeCompare(b.code));
 const snapshot = () => JSON.stringify(ROWS);
 const isDirty = () => snapshot() !== BASE_ROWS;
@@ -1170,11 +1202,16 @@ function say(text, kind, busy) {
 function render() {
   const g = $("grid"), q = query.trim();
   const list = ROWS.filter(r => {
+    const sold = r.status === "مباع";
+    /* المباع ما بيزاحم القائمة: يظهر بفلتره، أو حين تبحث عنه */
+    if (filter === "مباع") { if (!sold) return false; }
+    else if (sold && !q) return false;
     if (filter === "موقوف") { if (r.status !== "موقوف") return false; }
-    else if (filter !== "all" && r.cat !== filter) return false;
+    else if (filter === "stale") { if (!isStale(r)) return false; }
+    else if (filter !== "all" && filter !== "مباع" && r.cat !== filter) return false;
     if (!q) return true;
     return [r.code, r.title, r.area, (r.feats || []).join(" "), r.note].join(" ").includes(q);
-  }).sort((a, b) => a.code.localeCompare(b.code));
+  }).sort((a, b) => filter === "stale" ? (touchedAt(a) || 0) - (touchedAt(b) || 0) : a.code.localeCompare(b.code));
 
   g.textContent = "";
   if (!list.length) {
@@ -1215,11 +1252,31 @@ function render() {
     gl.addEventListener("click", ev => { ev.stopPropagation(); openGallery(r); });
     acts.appendChild(gl);
 
+    if (r.status === "مباع") {
+      const av = document.createElement("button");
+      av.type = "button"; av.className = "card-sold"; av.textContent = "↩︎ رجّعه متاحاً";
+      av.addEventListener("click", ev => { ev.stopPropagation(); markAvailable(r); });
+      acts.appendChild(av);
+    } else {
+      if (isStale(r)) {
+        const ok = document.createElement("button");
+        ok.type = "button"; ok.className = "card-ok"; ok.textContent = "✓ ما زال متاحاً";
+        ok.addEventListener("click", ev => { ev.stopPropagation(); confirmFresh(r); });
+        acts.appendChild(ok);
+      }
+      const sd = document.createElement("button");
+      sd.type = "button"; sd.className = "card-sold"; sd.textContent = "💰 مباع";
+      sd.setAttribute("aria-label", "تم بيع " + r.code);
+      sd.addEventListener("click", ev => { ev.stopPropagation(); markSold(r); });
+      acts.appendChild(sd);
+    }
+
     const row = document.createElement("div"); row.className = "row1";
     const code = document.createElement("span"); code.className = "code"; code.textContent = r.code;
     row.appendChild(code);
     const t = document.createElement("span");
-    if (r.status === "موقوف") { t.className = "tag hold"; t.textContent = "موقوف"; }
+    if (r.status === "مباع") { t.className = "tag sold"; t.textContent = "مباع"; }
+    else if (r.status === "موقوف") { t.className = "tag hold"; t.textContent = "موقوف"; }
     else if (r.confirmed === false) { t.className = "tag ask"; t.textContent = "بلا سعر"; }
     else { t.className = "tag"; t.textContent = r.cat; }
     row.appendChild(t);
@@ -1238,11 +1295,22 @@ function render() {
     p.textContent = r.confirmed === false ? "السعر عند التواصل"
       : money(totalOf(r)) + (r.mode === "للدنم" ? "  (" + money(r.price) + " للدنم)" : "");
     b.appendChild(p);
+    const ag = document.createElement("div"); ag.className = "age";
+    if (r.status === "مباع") ag.textContent = "بِيع" + (r.soldAt ? " بتاريخ " + r.soldAt : "");
+    else {
+      const a = ageDays(r);
+      ag.textContent = a === null ? "بلا تاريخ تحديث" : "آخر تحديث " + (a === 0 ? "اليوم" : "منذ " + a + " يوماً");
+      if (isStale(r)) ag.classList.add("stale");
+    }
+    b.appendChild(ag);
     g.appendChild(card);
   }
-  const held = ROWS.filter(r => r.status === "موقوف").length;
-  $("count").textContent = list.length + " من " + ROWS.length + " عقار"
-    + (held ? " · " + held + " موقوف ما بينشر" : "");
+  const held = ROWS.filter(r => r.status === "موقوف").length, soldN = ROWS.filter(r => r.status === "مباع").length,
+    staleN = ROWS.filter(isStale).length, total = filter === "مباع" ? soldN : ROWS.length - soldN;
+  $("count").textContent = list.length + " من " + total + " عقار"
+    + (held ? " · " + held + " موقوف ما بينشر" : "")
+    + (soldN && filter !== "مباع" ? " · " + soldN + " مباع" : "")
+    + (staleN ? " · " + staleN + " تحتاج مراجعة" : "");
   updateBar();
   saveDraft();
 }
@@ -1419,6 +1487,8 @@ function openForm(r) {
   $("f_feat").checked = !!(r && r.featured);
   $("f_papers").value = r ? (r.papers || "") : "";
   $("f_status").value = r ? (r.status || "متاح") : "متاح";
+  $("f_sold").value = r && r.soldAt ? r.soldAt : "";
+  $("soldBox").hidden = $("f_status").value !== "مباع";
   $("f_note").value = r ? (r.note || "") : "";
   feats = r && Array.isArray(r.feats) ? r.feats.slice() : [];
   drawFeats();
@@ -1467,16 +1537,19 @@ function save() {
   if (!isFinite(price) || price <= 0) return fail("اكتب السعر بأرقام (مثلاً 250000).", "f_price");
   if (mode === "للدنم" && !m2) return fail("سعر الدنم بدّو مساحة أرض.", "f_land");
 
+  const status = $("f_status").value, nowT = nowIso();
   const body = {
-    code, status: $("f_status").value, cat: $("f_cat").value, title,
+    code, status, cat: $("f_cat").value, title,
     area: $("f_area").value, area_m2: m2, bua: isFinite(bua) && bua > 0 ? Math.round(bua) : null,
-    mode, price: Math.round(price), nego: $("f_nego").checked, confirmed: $("f_conf").checked, featured: $("f_feat").checked,
+    mode, price: Math.round(price), nego: $("f_nego").checked, confirmed: $("f_conf").checked,
+    featured: status === "مباع" ? false : $("f_feat").checked,
     papers: $("f_papers").value, feats: feats.slice(), photos: photos.slice(),
     note: $("f_note").value.trim(),
     src_place: $("p_place").value.trim(), src_by: $("p_by").value.trim(),
     commission: $("p_comm").value.trim(), src_notes: $("p_notes").value.trim(),
-    updatedAt: new Date().toISOString()
+    updatedAt: nowT, confirmedAt: nowT
   };
+  if (status === "مباع") body.soldAt = $("f_sold").value || today();
   /* السعر لم يتغيّر في تعديل عقار قائم؟ لا نزعجك بالتنبيه */
   const same = editing && +editing.price === body.price && editing.mode === body.mode
     && +editing.area_m2 === +body.area_m2 && editing.cat === body.cat;
@@ -1484,14 +1557,22 @@ function save() {
     const warn = priceSanity(body);
     if (warn && !confirm("⚠️ دقّق السعر:\n" + warn + "\n\nموافق = احفظ كما هو\nإلغاء = ارجع وعدّل")) return;
   }
-  if (editing) Object.assign(editing, body);
+  /* عقار جديد أو تغيّرت مواصفاته وهو متاح: هل هو تكرار لعقار عندك؟ */
+  const sameFacts = same && editing.area === body.area && (+editing.bua || 0) === (+body.bua || 0)
+    && editing.title === body.title && editing.status === body.status;
+  if (status === "متاح" && !sameFacts) {
+    const sim = findSimilar(body);
+    if (sim.length && !confirm("⚠️ يشبه عقاراً عندك:\n" + sim.slice(0, 3).map(r => r.code + " — " + r.title + (r.status === "مباع" ? " (مباع)" : r.status === "موقوف" ? " (موقوف)" : "")).join("\n")
+        + "\n\nنفس النوع والمنطقة ومساحة وسعر متقاربان.\nموافق = احفظه كعقار مستقل\nإلغاء = ارجع وراجع")) return;
+  }
+  if (editing) { Object.assign(editing, body); if (status !== "مباع") delete editing.soldAt; }
   else { body._new = true; ROWS.push(body); }
   $("dlg").close();
   render();
 }
 function removeIt() {
   if (!editing) return;
-  if (!confirm("متأكد بدك تحذف " + editing.code + " نهائياً؟\n\nلو بدك بس توقفه عن النشر، بدّل الحالة لـ«موقوف».")) return;
+  if (!confirm("متأكد بدك تحذف " + editing.code + " نهائياً؟\n\nلو بدك بس توقفه عن النشر بدّل الحالة لـ«موقوف»، ولو انباع بدّلها لـ«مباع» (بيبقى محفوظ عندك).")) return;
   ROWS = ROWS.filter(r => r !== editing);
   $("dlg").close();
   render();
@@ -1619,7 +1700,7 @@ async function publish() {
     /* صفحات الصور الخاصة: صفحة عامة بلا صور + ملف صور مشفّر لا يُفتح بدون المفتاح */
     const galKeep = new Set();
     for (const r of ROWS) {
-      if (!galReady(r) || !(r.photos || []).length) continue;
+      if (!galReady(r) || !(r.photos || []).length || r.status === "مباع") continue;   /* المباع: لا صفحة صور خاصة */
       files.push({ path: galPath(r.galKey), content: galleryPage(r) });
       galKeep.add(galPath(r.galKey)); galKeep.add(binPath(r.galKey));
       const base = JSON.parse(BASE_ROWS).find(b => b.code === r.code);
@@ -1889,6 +1970,11 @@ async function restoreVersion(v, d) {
     setTimeout(() => { say("", ""); updateBar(); }, 15000);
   } catch (e) { alert("ما زبط الاسترجاع: " + e.message); }
 }
+$("f_status").addEventListener("change", () => {
+  const sold = $("f_status").value === "مباع";
+  $("soldBox").hidden = !sold;
+  if (sold && !$("f_sold").value) $("f_sold").value = today();
+});
 $("verBtn").addEventListener("click", openVersions);
 $("verClose").addEventListener("click", () => $("verDlg").close());
 $("verDone").addEventListener("click", () => $("verDlg").close());
