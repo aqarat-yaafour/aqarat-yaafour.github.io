@@ -44,6 +44,13 @@ const quote = t => encodeURIComponent(t)
 const wa = t => "https://wa.me/" + PHONE_INTL + "?text=" + quote(t);
 /* التاريخ بالتوقيت المحلي (متل datetime.date.today في بايثون) — مو UTC،
    وإلا اختلف تاريخ الموقع حسب مين نشره وبأي ساعة */
+/* تاريخ آخر تعديل للعقار بالتوقيت المحلي — ثابت، فلا تتغيّر صفحات لم تتعدّل (نشر أسرع) */
+const dayOf = iso => {
+  if (!iso) return null;
+  const d = new Date(iso); if (isNaN(d)) return null;
+  const p = n => String(n).padStart(2, "0");
+  return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
+};
 const today = () => {
   const d = new Date(), p = n => String(n).padStart(2, "0");
   return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate());
@@ -100,23 +107,27 @@ async function encryptPhotos(secret, list) {
 }
 
 /* ===== GitHub ===== */
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 async function gh(path, opts) {
-  const r = await fetch("https://api.github.com" + path, Object.assign({
-    headers: {
-      Authorization: "Bearer " + CFG.token,
-      Accept: "application/vnd.github+json",
-      "X-GitHub-Api-Version": "2022-11-28"
-    }
-  }, opts || {}));
-  if (r.status === 404) return null;
-  if (!r.ok) {
+  for (let a = 0; ; a++) {
+    const r = await fetch("https://api.github.com" + path, Object.assign({
+      headers: {
+        Authorization: "Bearer " + CFG.token,
+        Accept: "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28"
+      }
+    }, opts || {}));
+    if (r.status === 404) return null;
+    if (r.ok) return r.status === 204 ? true : r.json();
     let m = r.status + "";
     try { m = (await r.json()).message || m; } catch (e) { }
+    /* حدّ سرعة GitHub: ننتظر ونعيد المحاولة بدل ما نفشل النشر */
+    const limited = r.status === 429 || (r.status === 403 && (r.headers.get("retry-after") || /rate limit|abuse/i.test(m)));
+    if (limited && a < 3) { await sleep(((+r.headers.get("retry-after")) || 2 ** (a + 1)) * 1000); continue; }
     if (r.status === 401) m = "المفتاح غير صالح أو انتهت صلاحيته.";
     if (r.status === 403) m = "المفتاح ما عنده صلاحية الكتابة على هالمستودع.";
     throw new Error(m);
   }
-  return r.status === 204 ? true : r.json();
 }
 const ghPost = (p, body) => gh(p, { method: "POST", body: JSON.stringify(body) });
 
@@ -137,36 +148,56 @@ async function ghRaw(repo, path) {
   } catch (e) { return null; }
 }
 
-/** كل مسارات الملفات الموجودة حالياً في المستودع */
-async function repoPaths(repo) {
-  const o = CFG.owner;
-  const ref = await gh(`/repos/${o}/${repo}/git/ref/heads/main`);
-  if (!ref) return [];
-  const t = await gh(`/repos/${o}/${repo}/git/trees/${ref.object.sha}?recursive=1`);
-  return (t && t.tree || []).filter(e => e.type === "blob").map(e => e.path);
-}
-
-/** commit واحد يحمل كل الملفات. files: [{path, content|b64}] ، deletes: [مسار] */
-async function commit(repo, files, message, deletes) {
+/** لقطة المستودع: آخر commit وشجرته وبصمة (sha) كل ملف */
+async function repoTree(repo) {
   const o = CFG.owner;
   const ref = await gh(`/repos/${o}/${repo}/git/ref/heads/main`);
   if (!ref) throw new Error(`ما لقيت فرع main في ${repo}. تأكد أن المستودع فيه ملف واحد على الأقل.`);
   const head = ref.object.sha;
   const base = (await gh(`/repos/${o}/${repo}/git/commits/${head}`)).tree.sha;
+  const t = await gh(`/repos/${o}/${repo}/git/trees/${base}?recursive=1`);
+  const map = new Map((t && t.tree || []).filter(e => e.type === "blob").map(e => [e.path, e.sha]));
+  return { head, base, map };
+}
 
-  const tree = [];
+/** بصمة Git للملف محلياً: نعرف قبل الرفع إن كان تغيّر فعلاً */
+async function gitSha(bytes) {
+  const h = new TextEncoder().encode(`blob ${bytes.length}\0`);
+  const all = new Uint8Array(h.length + bytes.length); all.set(h); all.set(bytes, h.length);
+  return Array.from(new Uint8Array(await crypto.subtle.digest("SHA-1", all)), v => v.toString(16).padStart(2, "0")).join("");
+}
+/** تنفيذ متوازٍ بحدّ أقصى n في الوقت نفسه */
+async function pool(items, n, fn) {
+  const out = new Array(items.length); let i = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+    while (i < items.length) { const k = i++; out[k] = await fn(items[k], k); }
+  }));
+  return out;
+}
+
+/** commit واحد يحمل كل الملفات المتغيّرة فقط. files: [{path, content|b64}] ، deletes: [مسار]
+    النص يُرسل داخل الشجرة مباشرة (طلب واحد لكل النصوص)، والملفات الثنائية بالتوازي.
+    يرجع null إن لم يتغيّر شيء. */
+async function commit(repo, files, message, deletes, snap) {
+  const o = CFG.owner;
+  snap = snap || await repoTree(repo);
+  const tree = [], bins = [];
   for (const f of files) {
-    const blob = await ghPost(`/repos/${o}/${repo}/git/blobs`,
-      f.b64 ? { content: f.b64, encoding: "base64" } : { content: f.content, encoding: "utf-8" });
-    tree.push({ path: f.path, mode: "100644", type: "blob", sha: blob.sha });
+    const bytes = f.b64 ? unb64(f.b64) : new TextEncoder().encode(f.content);
+    if (snap.map.get(f.path) === await gitSha(bytes)) continue;      /* لم يتغيّر */
+    if (f.b64) bins.push(f);
+    else tree.push({ path: f.path, mode: "100644", type: "blob", content: f.content });
   }
+  const shas = await pool(bins, 4, f => ghPost(`/repos/${o}/${repo}/git/blobs`, { content: f.b64, encoding: "base64" }));
+  bins.forEach((f, i) => tree.push({ path: f.path, mode: "100644", type: "blob", sha: shas[i].sha }));
   /* sha: null يحذف الملف من الشجرة */
-  for (const p of (deletes || [])) tree.push({ path: p, mode: "100644", type: "blob", sha: null });
+  for (const p of (deletes || [])) if (snap.map.has(p)) tree.push({ path: p, mode: "100644", type: "blob", sha: null });
+  if (!tree.length) return null;
 
-  const newTree = await ghPost(`/repos/${o}/${repo}/git/trees`, { base_tree: base, tree });
-  const c = await ghPost(`/repos/${o}/${repo}/git/commits`, { message, tree: newTree.sha, parents: [head] });
+  const newTree = await ghPost(`/repos/${o}/${repo}/git/trees`, { base_tree: snap.base, tree });
+  const c = await ghPost(`/repos/${o}/${repo}/git/commits`, { message, tree: newTree.sha, parents: [snap.head] });
   await gh(`/repos/${o}/${repo}/git/refs/heads/main`, { method: "PATCH", body: JSON.stringify({ sha: c.sha }) });
-  return c.sha;
+  return { sha: c.sha, changed: tree.length };
 }
 
 /* ===== مولّد الموقع — التصميم الجديد (زمرّد ملكي + خط جريء عريض) =====
@@ -253,7 +284,7 @@ function listingPage(x, live) {
   if (total) offer.price = Math.round(total);
   const jsonld = {
     "@context": "https://schema.org", "@type": "RealEstateListing", name: x.title, url: canonical,
-    description: desc, datePosted: today(),
+    description: desc, datePosted: dayOf(x.updatedAt) || today(),
     about: {
       "@type": "Place", name: `${x.cat} في ${x.area}`,
       address: { "@type": "PostalAddress", addressLocality: x.area, addressRegion: "ريف دمشق", addressCountry: "SY" }
@@ -563,11 +594,13 @@ ${FOOT()}`;
     `<script type="application/ld+json">${JSON.stringify(faq)}<\/script>`, null, "pg-index") + body;
 }
 function sitemapXml(live) {
-  const urls = [[BASE + "/", "1.0"]]
-    .concat(collectionsAll(live).map(c => [`${BASE}/${c.slug}`, "0.9"]))
-    .concat(live.map(x => [`${BASE}/listing/${x.code}.html`, "0.8"]));
+  const days = live.map(x => dayOf(x.updatedAt)).filter(Boolean).sort();
+  const last = days[days.length - 1] || today();
+  const urls = [[BASE + "/", "1.0", last]]
+    .concat(collectionsAll(live).map(c => [`${BASE}/${c.slug}`, "0.9", last]))
+    .concat(live.map(x => [`${BASE}/listing/${x.code}.html`, "0.8", dayOf(x.updatedAt) || last]));
   return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-    + urls.map(([u, p]) => `  <url><loc>${u}</loc><lastmod>${today()}</lastmod><priority>${p}</priority></url>\n`).join("")
+    + urls.map(([u, p, d]) => `  <url><loc>${u}</loc><lastmod>${d}</lastmod><priority>${p}</priority></url>\n`).join("")
     + "</urlset>\n";
 }
 /* البيانات العامة — نفس حقول public.json */
@@ -1264,22 +1297,23 @@ async function publish() {
     /* الصور تُحفظ في المستودع الخاص فقط: الجديد يُرفع، والقديم في الموقع العام يُرحَّل */
     say("جارٍ حفظ بياناتك وصورك في المستودع الخاص…", "warn", true);
     const usedPhotos = new Set(ROWS.flatMap(r => r.photos || []));
-    const privPaths = new Set(await repoPaths(CFG.priv));
+    const [privSnap, pubSnap] = await Promise.all([repoTree(CFG.priv), repoTree(CFG.pub)]);
+    const privPaths = privSnap.map;
     const privFiles = [];
     const unsafe = new Set();      /* صور تعذّر ترحيلها: لا نحذف نسختها العامة */
-    for (const p of usedPhotos) {
+    await pool([...usedPhotos], 4, async p => {
       if (newBlobs[p]) privFiles.push({ path: p, b64: newBlobs[p] });
       else if (!privPaths.has(p)) {
         const bytes = await photoBytes(p);
         if (bytes) privFiles.push({ path: p, b64: b64(bytes) });
         else unsafe.add(p);
       }
-    }
-    const privDeletes = [...privPaths].filter(p => p.startsWith("img/") && !usedPhotos.has(p));
+    });
+    const privDeletes = [...privPaths.keys()].filter(p => p.startsWith("img/") && !usedPhotos.has(p));
     const clean = ROWS.map(r => { const c = Object.assign({}, r); delete c._new; return c; });
     /* بياناتك أولاً: هي الأصل. لو انقطع النت بعدها، ما بتضيع ولا معلومة. */
     await commit(CFG.priv, [{ path: "private.json", content: JSON.stringify(clean, null, 1) }].concat(privFiles),
-      "تحديث بيانات المخزون", privDeletes);
+      "تحديث بيانات المخزون", privDeletes, privSnap);
 
     say("جارٍ تجهيز صفحات الموقع…", "warn", true);
     const cols = collectionsAll(live);
@@ -1291,8 +1325,8 @@ async function publish() {
     for (const c of cols) files.push({ path: c.slug, content: collectionPage(c, cols) });
     for (const x of live) files.push({ path: `listing/${x.code}.html`, content: listingPage(x, live) });
 
-    const existing = await repoPaths(CFG.pub);
-    const pubHas = new Set(existing);
+    const existing = [...pubSnap.map.keys()];
+    const pubHas = pubSnap.map;
     /* صفحات الصور الخاصة: صفحة عامة بلا صور + ملف صور مشفّر لا يُفتح بدون المفتاح */
     const galKeep = new Set();
     for (const r of ROWS) {
@@ -1305,8 +1339,7 @@ async function publish() {
         || r.photos.some(p => newBlobs[p]);
       if (!changed) continue;
       say("جارٍ تشفير صور " + r.code + "…", "warn", true);
-      const list = [];
-      for (const p of r.photos) { const bytes = await photoBytes(p); if (bytes) list.push(bytes); }
+      const list = (await pool(r.photos, 4, p => photoBytes(p))).filter(Boolean);
       files.push({ path: binPath(r.galKey), b64: b64(await encryptPhotos(r.galSecret, list)) });
     }
 
@@ -1328,9 +1361,8 @@ async function publish() {
       /* كل صور العقارات تغادر المستودع العام (ما عدا صورتك الشخصية) */
       (p.startsWith("img/") && p !== "img/mohammad-khaled.jpg" && !unsafe.has(p)));
 
-    say("جارٍ الرفع (" + files.length + " ملف"
-      + (deletes.length ? " · حذف " + deletes.length : "") + ")…", "warn", true);
-    await commit(CFG.pub, files, "تحديث المخزون من لوحة الإدارة", deletes);
+    say("جارٍ الرفع…", "warn", true);
+    await commit(CFG.pub, files, "تحديث المخزون من لوحة الإدارة", deletes, pubSnap);
 
     for (const p in newBlobs) photoUrls.delete(p);
     newBlobs = {};
