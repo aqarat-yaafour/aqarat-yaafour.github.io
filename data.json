@@ -16,7 +16,8 @@
   "total": 25000000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-002",
@@ -40,7 +41,8 @@
   "total": 6000000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-003",
@@ -62,7 +64,8 @@
   "total": 1800000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-004",
@@ -82,7 +85,8 @@
   "total": 750000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-005",
@@ -105,7 +109,8 @@
   "total": 800000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-008",
@@ -125,7 +130,8 @@
   "total": 5280000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-009",
@@ -145,7 +151,8 @@
   "total": 1250000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-010",
@@ -165,7 +172,8 @@
   "total": 1500000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-011",
@@ -188,7 +196,8 @@
   "total": 1500000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-012",
@@ -211,7 +220,8 @@
   "total": 1800000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-013",
@@ -231,7 +241,8 @@
   "total": 4000000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-014",
@@ -252,7 +263,8 @@
   "total": 300000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-015",
@@ -276,7 +288,8 @@
   "total": 1500000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-016",
@@ -296,7 +309,8 @@
   "total": 1000000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-017",
@@ -318,7 +332,8 @@
   "total": 300000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-018",
@@ -339,7 +354,8 @@
   "total": 300000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-019",
@@ -360,7 +376,8 @@
   "total": 350000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-020",
@@ -382,7 +399,8 @@
   "total": 500000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  },
  {
   "code": "MK-021",
@@ -404,6 +422,7 @@
   "total": 1500000,
   "unconfirmed": false,
   "papers": "",
-  "photos": []
+  "photos": [],
+  "featured": false
  }
 ]
