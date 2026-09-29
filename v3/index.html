@@ -1,22 +1,22 @@
 <!doctype html>
-<html lang="ar" dir="rtl">
+<html lang="ar" dir="rtl" class="solid">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>عقارات يعفور وقرى الشام | محمد خالد - مستشار عقاري</title>
 <meta name="robots" content="noindex,follow">
 <link rel="canonical" href="https://aqarat-yaafour.github.io/">
-<meta name="theme-color" content="#070707" id="themeColor">
+<meta name="theme-color" content="#06231b" id="themeColor">
 <link rel="icon" href="../favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link id="fontLink" rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Tajawal:wght@300;400;500;700;800&display=swap">
+<link id="fontLink" rel="stylesheet" href="https://fonts.googleapis.com/css2?display=swap&family=Lalezar&family=Cairo:wght@400;600;700;800">
 <style>
 :root{
-  --bg:#070707; --bg2:#101010; --card:#141414; --sheet:#121212; --ink:#efe9dc; --ink2:#c9c1b1; --mute:#8f887b;
-  --gold:#d9b35b; --gold2:#f4d98e; --gold3:#8c6b25; --on-acc:#161005; --cover1:#1c1913; --cover2:#0d0d0e;
-  --bg-rgb:7,7,7; --ink-rgb:239,233,220; --acc-rgb:217,179,91; --acc2-rgb:244,217,142; --shadow:rgba(0,0,0,.55);
+  --bg:#06231b; --bg2:#0a2e24; --card:#0b2f25; --sheet:#08281f; --ink:#f3ecd9; --ink2:#d2cab2; --mute:#93ad9f;
+  --gold:#e6b84c; --gold2:#f7d37a; --gold3:#9a7420; --on-acc:#1c1403; --cover1:#0f3d30; --cover2:#03160f;
+  --bg-rgb:6,35,27; --ink-rgb:243,236,217; --acc-rgb:230,184,76; --acc2-rgb:247,211,122; --shadow:rgba(0,0,0,.5);
   --line:rgba(var(--ink-rgb),.1);
-  --fd:'Amiri',serif; --fb:'Tajawal',system-ui,sans-serif; --fdw:700; --dlh:1; --dls:-1px; --fbw:800;
+  --fd:'Lalezar',sans-serif; --fb:'Cairo',system-ui,sans-serif; --fdw:400; --dlh:1.12; --dls:0px; --fbw:800;
   --pad:22px; --ease:cubic-bezier(.2,.8,.2,1);
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -228,6 +228,7 @@ html.lock .dock{transform:translateY(140%)!important}
   .hero.side3d .touchhint{left:30%}
 }
 /* palette switcher (preview only) */
+.pal[hidden]{display:none}
 .pal{position:fixed;left:12px;top:74px;z-index:66;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .pal-btn{height:44px;padding:0 14px 0 10px;border-radius:99px;display:flex;align-items:center;gap:8px;font-weight:700;font-size:13px;
   background:rgba(var(--bg-rgb),.85);border:1px solid rgba(var(--acc-rgb),.5);color:var(--ink);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);box-shadow:0 10px 30px var(--shadow)}
@@ -361,7 +362,7 @@ html.lock .dock{transform:translateY(140%)!important}
   الأسعار والتوفر قابلة للتغيير. الأوراق تُعرض كاملة قبل أي عربون.
 </footer>
 
-<div class="pal" id="pal"><button class="pal-btn" id="palBtn" aria-expanded="false"><i></i>المشهد والألوان والخطوط</button><div class="pal-list" id="palList"></div></div>
+<div class="pal" id="pal" hidden><button class="pal-btn" id="palBtn" aria-expanded="false"><i></i>المشهد والألوان والخطوط</button><div class="pal-list" id="palList"></div></div>
 
 <div class="sheet-bg" id="sheetBg"></div>
 <div class="sheet" id="sheet" role="dialog" aria-modal="true" aria-label="تفاصيل العقار"><div class="grab" id="grab"><i></i></div><div class="sheet-body" id="sheetBody"></div></div>
@@ -440,9 +441,10 @@ const FONTS = {
     url: GF + 'El+Messiri:wght@500;700&family=Almarai:wght@400;700;800' }
 };
 const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
-let THEME = null, THEME_KEY = 'olive', FONT_KEY = 'classic';
+const TUNE = new URLSearchParams(location.search).has('tune');   // add ?tune=1 to the address to reopen the palette / font / scene picker
+let THEME = null, THEME_KEY = 'emerald', FONT_KEY = 'bold';
 function applyPalette(key, save = true) {
-  const P = PALETTES[key] || PALETTES.olive; THEME_KEY = PALETTES[key] ? key : 'olive';
+  const P = PALETTES[key] || PALETTES.emerald; THEME_KEY = PALETTES[key] ? key : 'emerald';
   const st = document.documentElement.style, set = (k, v) => st.setProperty(k, v);
   set('--bg', P.bg); set('--bg2', P.bg2); set('--card', P.card); set('--sheet', P.sheet); set('--ink', P.ink); set('--ink2', P.ink2); set('--mute', P.mute);
   set('--gold', P.acc); set('--gold2', P.acc2); set('--gold3', P.acc3); set('--on-acc', P.onAcc); set('--cover1', P.cover1); set('--cover2', P.cover2); set('--shadow', P.shadow);
@@ -457,7 +459,7 @@ function applyPalette(key, save = true) {
   renderPalList();
 }
 function applyFont(key, save = true) {
-  const F = FONTS[key] || FONTS.classic; FONT_KEY = FONTS[key] ? key : 'classic';
+  const F = FONTS[key] || FONTS.bold; FONT_KEY = FONTS[key] ? key : 'bold';
   const link = document.getElementById('fontLink'); if (link.href !== F.url) link.href = F.url;
   const st = document.documentElement.style;
   st.setProperty('--fd', F.fd); st.setProperty('--fb', F.fb); st.setProperty('--fdw', F.fdw);
@@ -489,12 +491,10 @@ function renderPalList() {
     <span class="bd" style="font-family:${F.fb.replace(/"/g, "'")}">${F.name}<br>1.8 مليون $</span></button>`).join('');
 }
 (function initPalette() {
-  let k = new URL(location.href).searchParams.get('p');
-  if (!k) { try { k = localStorage.getItem('mk-palette'); } catch (e) {} }
-  applyPalette(k || 'olive', false);
-  let f = new URL(location.href).searchParams.get('f');
-  if (!f) { try { f = localStorage.getItem('mk-font'); } catch (e) {} }
-  applyFont(f || 'classic', false);
+  let k = TUNE ? new URL(location.href).searchParams.get('p') : null, f = TUNE ? new URL(location.href).searchParams.get('f') : null;
+  if (TUNE) { try { k = k || localStorage.getItem('mk-palette'); f = f || localStorage.getItem('mk-font'); } catch (e) {} }
+  applyPalette(k || 'emerald', false);
+  applyFont(f || 'bold', false);
 })();
 
 function cover(x, seed) {
@@ -1076,9 +1076,10 @@ function applyScene(key, save = true) {
   renderPalList();
 }
 (function initScene() {
-  let k = new URL(location.href).searchParams.get('s');
-  if (!k) { try { k = localStorage.getItem('mk-scene'); } catch (e) {} }
-  applyScene(k || 'terrain', false);
+  let k = TUNE ? new URL(location.href).searchParams.get('s') : null;
+  if (TUNE && !k) { try { k = localStorage.getItem('mk-scene'); } catch (e) {} }
+  applyScene(k || 'plots', false);
+  if (TUNE) document.getElementById('pal').hidden = false;
 })();
 
 /* ================= marquee driven by scroll speed ================= */
