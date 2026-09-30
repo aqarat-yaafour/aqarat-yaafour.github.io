@@ -104,6 +104,14 @@ header.top .sub{margin:2px 0 0;color:var(--ink-2);font-size:14px}
 .card h3{margin:2px 0 0;font-family:var(--display);font-size:22px;font-weight:400;line-height:1.35}
 .card .meta{font-size:13.5px;color:var(--muted);font-weight:700}
 .tag.sold{background:rgba(127,224,168,.14);color:var(--ok);border-color:rgba(127,224,168,.4)}
+.vchk-items{display:grid;gap:8px}
+.vchk-items .check{align-items:flex-start}
+.vchk-items .check small{display:block;color:var(--muted);font-weight:600;font-size:12.5px;line-height:1.5}
+.vchk-items .check .opt{color:var(--muted);font-weight:600;font-size:12px}
+.card .vb{font-size:12.5px;font-weight:800}
+.card .vb.ok{color:var(--ok)}
+.card .vb.warn{color:var(--gold-light)}
+.card .vb.bad{color:var(--danger)}
 .card .age{font-size:12.5px;font-weight:700;color:var(--muted)}
 .card .age.stale{color:var(--danger)}
 .card-ok{color:var(--ok)!important;border-color:rgba(127,224,168,.4)!important}
@@ -286,6 +294,7 @@ option{background:#0a2e24;color:var(--ink)}
       <button class="chip" type="button" data-f="استثماري" aria-pressed="false">استثماري</button>
       <button class="chip" type="button" data-f="موقوف" aria-pressed="false">الموقوف</button>
       <button class="chip" type="button" data-f="stale" aria-pressed="false">لم يُحدَّث</button>
+      <button class="chip" type="button" data-f="verify" aria-pressed="false">يحتاج تحقق</button>
       <button class="chip" type="button" data-f="مباع" aria-pressed="false">المباع</button>
     </div>
   </div>
@@ -525,6 +534,9 @@ option{background:#0a2e24;color:var(--ink)}
         <div class="f"><label for="p_by">من طرف</label><input type="text" id="p_by" placeholder="أبو عادل" autocomplete="off"></div>
         <div class="f"><label for="p_comm">العمولة</label><input type="text" id="p_comm" autocomplete="off"></div>
         <div class="f wide"><label for="p_notes">ملاحظات خاصة</label><textarea id="p_notes"></textarea></div>
+        <div class="f wide"><label>قائمة التحقق <span class="hint" id="vchkProg"></span></label><div id="vchkItems" class="vchk-items"></div>
+          <span class="hint">تحميك من نشر عقار ما عندك إثبات عليه. اللوحة بتنبّهك قبل النشر لو في شي ناقص.</span></div>
+        <div class="f"><label for="p_auth_until">انتهاء التفويض (إن وُجد)</label><input type="date" id="p_auth_until"></div>
       </div>
     </fieldset>
 

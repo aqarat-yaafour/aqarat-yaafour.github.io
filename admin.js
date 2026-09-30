@@ -1158,6 +1158,23 @@ const touchedAt = r => Date.parse(r.confirmedAt) || Date.parse(r.updatedAt) || n
 const ageDays = r => { const t = touchedAt(r); return t ? Math.max(0, Math.floor((Date.now() - t) / 864e5)) : null; };
 const isStale = r => isLive(r) && (ageDays(r) || 0) >= STALE_DAYS;
 const nowIso = () => new Date().toISOString();
+/* ===== قائمة التحقق (خاصة): تحميك من نشر عقار ما عندك إثبات عليه =====
+   كل بند يُخزَّن بتاريخ التحقق (checks.deed = "2026-09-30"). عقار بلا حقل checks = قديم لا يُتتبَّع، فلا يُزعَج. */
+const CHECKS = [
+  { k: "owner", t: "هوية المالك أو الوكيل", h: "نسخة عن الهوية، ووكالة رسمية إن كان وكيلاً" },
+  { k: "deed", t: "بيان قيد عقاري حديث", h: "يثبت المالك الحالي ويكشف أي حجز أو رهن" },
+  { k: "auth", t: "تفويض مكتوب بالبيع", h: "مع العمولة والمدة" },
+  { k: "cur", t: "العملة والسعر مؤكدان مع المالك", h: "دولار أم ليرة؟ وهل السعر شامل؟" },
+  { k: "photos", t: "الصور حديثة وللعقار نفسه", h: "اطلب صورة بتاريخ اليوم عند الشك" },
+  { k: "license", t: "الترخيص أو المخطط التنظيمي", h: "وثيقة رسمية وتاريخ صلاحيتها", only: "استثماري" }
+];
+const checksRequired = r => CHECKS.filter(c => !c.only || c.only === r.cat);   /* المطلوب يعتمد على النوع */
+const checkMissing = r => checksRequired(r).filter(c => !(r.checks && r.checks[c.k]));
+const tracked = r => r.checks !== undefined;
+/* أيام التقويم حتى نهاية التفويض: 0 = ينتهي اليوم (ما زال ساري)، سالب = انتهى */
+const authDays = r => { if (!r.authUntil) return null; const a = Date.parse(r.authUntil + "T00:00:00"), n = new Date(); return isNaN(a) ? null : Math.round((a - new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime()) / 864e5); };
+const authExpired = r => { const d = authDays(r); return d !== null && d < 0; };
+const needsVerify = r => isLive(r) && ((tracked(r) && checkMissing(r).length > 0) || authExpired(r));
 const normTitle = t => String(t || "").replace(/[\s\u064B-\u0652ـ،.\-_]/g, "").toLowerCase();
 /** عقارات تشبه b: نفس النوع والمنطقة، ومساحة وسعر متقاربان (±10%) أو نفس العنوان */
 function findSimilar(b) {
@@ -1264,6 +1281,7 @@ function render() {
     else if (sold && !q) return false;
     if (filter === "موقوف") { if (r.status !== "موقوف") return false; }
     else if (filter === "stale") { if (!isStale(r)) return false; }
+    else if (filter === "verify") { if (!needsVerify(r)) return false; }
     else if (filter !== "all" && filter !== "مباع" && r.cat !== filter) return false;
     if (!q) return true;
     return [r.code, r.title, r.area, (r.feats || []).join(" "), r.note].join(" ").includes(q);
@@ -1359,6 +1377,14 @@ function render() {
       if (isStale(r)) ag.classList.add("stale");
     }
     b.appendChild(ag);
+    if (isLive(r) && (tracked(r) || r.authUntil)) {
+      const req = checksRequired(r).length, miss = tracked(r) ? checkMissing(r).length : 0, parts = [];
+      if (tracked(r)) parts.push("تحقق " + (req - miss) + "/" + req);
+      const ad = authDays(r);
+      if (ad !== null) parts.push(ad < 0 ? "انتهى التفويض" : ad === 0 ? "التفويض ينتهي اليوم" : ad <= 14 ? "التفويض ينتهي خلال " + ad + " يوماً" : "التفويض حتى " + r.authUntil);
+      const vb = document.createElement("div"); vb.className = "vb " + (authExpired(r) || (tracked(r) && miss === req) ? "bad" : miss || (ad !== null && ad <= 14) ? "warn" : "ok");
+      vb.textContent = parts.join(" · "); b.appendChild(vb);
+    }
     g.appendChild(card);
   }
   const held = ROWS.filter(r => r.status === "موقوف").length, soldN = ROWS.filter(r => r.status === "مباع").length,
@@ -1366,7 +1392,8 @@ function render() {
   $("count").textContent = list.length + " من " + total + " عقار"
     + (held ? " · " + held + " موقوف ما بينشر" : "")
     + (soldN && filter !== "مباع" ? " · " + soldN + " مباع" : "")
-    + (staleN ? " · " + staleN + " تحتاج مراجعة" : "");
+    + (staleN ? " · " + staleN + " تحتاج مراجعة" : "")
+    + (ROWS.filter(needsVerify).length ? " · " + ROWS.filter(needsVerify).length + " تحتاج تحقق" : "");
   updateBar();
   saveDraft();
 }
@@ -1518,6 +1545,31 @@ function updateTotal() {
   const t = mode === "للدنم" ? price * m2 / 1000 : price;
   $("totalVal").textContent = t > 0 ? money(t) : "—";
 }
+let CHK_TOUCHED = false;
+function drawChecklist(r) {
+  const box = $("vchkItems"); box.textContent = "";
+  for (const c of CHECKS) {
+    const lab = document.createElement("label"); lab.className = "check";
+    const cb = document.createElement("input"); cb.type = "checkbox"; cb.dataset.k = c.k;
+    cb.checked = !!(r && r.checks && r.checks[c.k]);
+    const tx = document.createElement("span"); tx.textContent = c.t;
+    const sm = document.createElement("small"); sm.textContent = c.h + (cb.checked && r.checks[c.k] !== true ? " · تحقق بتاريخ " + r.checks[c.k] : "");
+    const opt = document.createElement("span"); opt.className = "opt"; opt.dataset.only = c.only || "";
+    tx.appendChild(document.createTextNode(" ")); tx.appendChild(opt); tx.appendChild(sm);
+    lab.appendChild(cb); lab.appendChild(tx); box.appendChild(lab);
+  }
+  updateChkProg();
+}
+function updateChkProg() {
+  const cat = $("f_cat").value, req = CHECKS.filter(c => !c.only || c.only === cat);
+  let done = 0;
+  for (const cb of $("vchkItems").querySelectorAll("input")) {
+    const c = CHECKS.find(x => x.k === cb.dataset.k), need = !c.only || c.only === cat;
+    if (need && cb.checked) done++;
+    cb.parentNode.querySelector(".opt").textContent = need ? "" : "(اختياري لهذا النوع)";
+  }
+  $("vchkProg").textContent = "— " + done + " من " + req.length + " مطلوب";
+}
 const NEW_AREA = "__new__";
 function fillAreaSelect(selected) {
   const sel = $("f_area"); sel.textContent = "";
@@ -1567,6 +1619,8 @@ function openForm(r) {
   $("p_by").value = r ? (r.src_by || "") : "";
   $("p_comm").value = r ? (r.commission || "") : "";
   $("p_notes").value = r ? (r.src_notes || "") : "";
+  $("p_auth_until").value = r && r.authUntil ? r.authUntil : "";
+  CHK_TOUCHED = false; drawChecklist(r);
   updateTotal();
   $("dlg").showModal();
 }
@@ -1631,6 +1685,13 @@ function save() {
     updatedAt: nowT, confirmedAt: nowT
   };
   if (status === "مباع") body.soldAt = $("f_sold").value || today();
+  /* قائمة التحقق: عقار جديد يُتتبَّع دائماً؛ وعقار قديم بلا قائمة لا يبدأ تتبّعه إلا إذا لمست القائمة أو التفويض */
+  if (!editing || editing.checks !== undefined || CHK_TOUCHED) {
+    body.checks = {};
+    for (const cb of $("vchkItems").querySelectorAll("input")) if (cb.checked) body.checks[cb.dataset.k] = (editing && editing.checks && editing.checks[cb.dataset.k]) || today();
+  }
+  const authUntil = $("p_auth_until").value;
+  if (authUntil) body.authUntil = authUntil;
   if (areaSlug) body.area_slug = areaSlug;
   if (areaRegion && areaRegion !== DEFAULT_REGION) body.area_region = areaRegion;
   /* السعر لم يتغيّر في تعديل عقار قائم؟ لا نزعجك بالتنبيه */
@@ -1648,7 +1709,7 @@ function save() {
     if (sim.length && !confirm("⚠️ يشبه عقاراً عندك:\n" + sim.slice(0, 3).map(r => r.code + " — " + r.title + (r.status === "مباع" ? " (مباع)" : r.status === "موقوف" ? " (موقوف)" : "")).join("\n")
         + "\n\nنفس النوع والمنطقة ومساحة وسعر متقاربان.\nموافق = احفظه كعقار مستقل\nإلغاء = ارجع وراجع")) return;
   }
-  if (editing) { delete editing.area_slug; delete editing.area_region; Object.assign(editing, body); if (status !== "مباع") delete editing.soldAt; }
+  if (editing) { delete editing.area_slug; delete editing.area_region; if (!authUntil) delete editing.authUntil; Object.assign(editing, body); if (status !== "مباع") delete editing.soldAt; }
   else { body._new = true; ROWS.push(body); }
   $("dlg").close();
   render();
@@ -1871,6 +1932,21 @@ async function publish() {
     const merged = await syncWithRemote();
     syncAreas(ROWS);
     const live = liveRows();
+
+    /* عقار سيظهر أو يتغيّر علناً وقائمة تحقّقه ناقصة (أو تفويضه منتهٍ): نسأل قبل النشر */
+    {
+      const baseMap = new Map(JSON.parse(BASE_ROWS).map(r => [r.code, r]));
+      const pubRepr = x => JSON.stringify(publicData([x])[0]);
+      const risky = live.map(r => {
+        const b = baseMap.get(r.code), changed = !b || !isLive(b) || pubRepr(r) !== pubRepr(b), why = [];
+        if (!changed) return null;
+        if (tracked(r) && checkMissing(r).length) why.push("ينقص: " + checkMissing(r).map(c => c.t).join("، "));
+        if (authExpired(r)) why.push("انتهى التفويض بتاريخ " + r.authUntil);
+        return why.length ? r.code + " — " + why.join(" · ") : null;
+      }).filter(Boolean);
+      if (risky.length && !confirm("⚠️ بتنشر عقارات ما اكتمل التحقق منها:\n\n" + risky.slice(0, 6).join("\n") + (risky.length > 6 ? "\n…و" + (risky.length - 6) + " غيرها" : "")
+          + "\n\nموافق = انشر رغم ذلك\nإلغاء = ارجع وأكمل التحقق")) throw new Error("توقّف النشر بطلبك: قائمة التحقق ناقصة.");
+    }
 
     /* روابط صور قديمة (بلا مفتاح تشفير) غير آمنة: تُلغى، ويُنشأ رابط جديد مشفّر عند الطلب */
     for (const r of ROWS) if (r.galKey && !r.galSecret) delete r.galKey;
@@ -2186,6 +2262,9 @@ async function restoreVersion(v, d) {
     setTimeout(() => { say("", ""); updateBar(); }, 15000);
   } catch (e) { alert("ما زبط الاسترجاع: " + e.message); }
 }
+$("vchkItems").addEventListener("change", () => { CHK_TOUCHED = true; updateChkProg(); });
+$("p_auth_until").addEventListener("input", () => { CHK_TOUCHED = true; });
+$("f_cat").addEventListener("change", updateChkProg);
 $("f_area").addEventListener("change", () => {
   $("newAreaBox").hidden = $("f_area").value !== NEW_AREA;
   if (!$("newAreaBox").hidden) $("f_area_new").focus();
