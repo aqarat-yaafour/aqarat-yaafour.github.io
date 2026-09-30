@@ -385,7 +385,7 @@ function listingPage(x, live) {
 ${FOOT()}`;
   return headHtml(title, desc, canonical, jsonld, extra, ogImage(x), "pg-listing") + body;
 }
-const AREA_ORDER = ["يعفور", "قرى الشام", "الصبورة"];   /* مناطق العقارات المسموحة */
+const AREA_ORDER = ["يعفور", "قرى الشام", "الصبورة", "صحنايا"];   /* مناطق العقارات المسموحة (صفحة المنطقة تُنشأ فقط إن وُجد فيها عقار) */
 const AREAS = ["يعفور", "قرى الشام", "الصبورة", "ريف دمشق"];
 const WHY = [
   ["pin", "خبرة في المنطقة", "أعمل في يعفور وقرى الشام والصبورة بريف دمشق، وأعرف عقاراتها وأسعارها عن قرب."],
@@ -461,7 +461,9 @@ function requestHtml() {
 }
 
 /* ===== صفحات التصفّح ===== */
-const AREA_SLUG = { "يعفور": "yaafour", "قرى الشام": "qura-alsham", "الصبورة": "sabboura" };
+const AREA_SLUG = { "يعفور": "yaafour", "قرى الشام": "qura-alsham", "الصبورة": "sabboura", "صحنايا": "sahnaya" };
+/* قائمة المناطق في نموذج العقار تُبنى من نفس القائمة: منطقة جديدة = سطر واحد أعلاه */
+{ const sel = $("f_area"); if (sel) { sel.textContent = ""; } for (const a of AREA_ORDER) if (sel) { const o = document.createElement("option"); o.textContent = a; sel.appendChild(o); } }
 const CAT_SLUG = { land: "land", villa: "villas", farm: "farms", apt: "apartments" };
 const CAT_PL = { land: "أراضٍ", villa: "فلل", farm: "مزارع", apt: "شقق" };
 const MIN_CAT = 2;
