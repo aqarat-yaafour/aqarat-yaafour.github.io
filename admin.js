@@ -256,9 +256,12 @@ function hashStr(str) {
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
   return ((h2 >>> 0).toString(36) + (h1 >>> 0).toString(36)).slice(0, 8);
 }
-const ogPath = x => x
-  ? `og/${x.code}-${hashStr(OG_V + JSON.stringify([x.code, x.cat, x.title, x.area, x.area_m2, x.bua, x.mode, x.price, !!x.nego, x.confirmed !== false]))}.jpg`
-  : `og/site-${OG_V}.jpg`;
+/* السعر المخفي ما بيدخل في البصمة: اسم الملف علني، وبصمة فيها السعر ممكن تُخمَّن بالتجربة */
+const ogPath = x => {
+  if (!x) return `og/site-${OG_V}.jpg`;
+  const shown = x.confirmed !== false;
+  return `og/${x.code}-${hashStr(OG_V + JSON.stringify([x.code, x.cat, x.title, x.area, x.area_m2, x.bua, shown ? x.mode : null, shown ? x.price : null, shown && !!x.nego, shown, regionOf(x.area)]))}.jpg`;
+};
 function ogImage(x) {
   return `${BASE}/${ogPath(x)}`;
 }
@@ -548,7 +551,8 @@ function collectionLinks(cols, current) {
 }
 function collectionPage(c, cols) {
   const items = c.items;
-  const totals = items.map(totalOf).filter(t => t > 0).sort((a, b) => a - b);
+  /* السعر المخفي («عند التواصل») ما بيدخل في أي نطاق أسعار علني */
+  const totals = items.filter(x => x.confirmed !== false).map(totalOf).filter(t => t > 0).sort((a, b) => a - b);
   let rng = "";
   if (totals.length) {
     rng = totals[0] !== totals[totals.length - 1]
