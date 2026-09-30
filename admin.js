@@ -13,6 +13,8 @@ const NAME = "محمد خالد", ROLE = "مستشار عقاري";
 const CAT_EN = { "أرض": "land", "فيلا": "villa", "مزرعة": "farm", "شقة": "apt", "استثماري": "invest" };
 const CAT_AR = { land: "أرض", villa: "فيلا", farm: "مزرعة", apt: "شقة", invest: "استثماري" };
 const CATS = ["أرض", "فيلا", "مزرعة", "شقة", "استثماري"];
+/* الاسم الذي يُكتب في العناوين والأوصاف ("استثماري" وحدها صفة، فتُكتب "عقار استثماري") */
+const catNoun = c => c === "استثماري" ? "عقار استثماري" : c;
 const CAT_KEYS = ["land", "villa", "farm", "apt", "invest"];   /* ترتيب التصنيفات في الفلاتر وصفحات الأصناف */
 
 let CFG = null, ROWS = [], BASE_ROWS = "", PRIV_SHA = null, PRIV_BASE = "", editing = null, quickRow = null;
@@ -235,7 +237,7 @@ async function commit(repo, files, message, deletes, snap, retried) {
 /* ===== مولّد الموقع — التصميم الجديد (زمرّد ملكي + خط جريء عريض) =====
    كل صفحة هنا HTML كامل جاهز لمحركات البحث، ثم يحسّنه assets/mk.css و assets/mk.js
    (وهما ملفان ثابتان في المستودع لا تلمسهما لوحة الإدارة). */
-const ASSET_V = "4";   /* ارفع الرقم عند تعديل mk.css أو mk.js ليُحمَّل الجديد عند الزوار */
+const ASSET_V = "5";   /* ارفع الرقم عند تعديل mk.css أو mk.js ليُحمَّل الجديد عند الزوار */
 const jsonInline = v => JSON.stringify(v).replace(/</g, "\\u003c");   /* آمن داخل <script> */
 const WA_SVG = '<svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3zm5.8 15.7c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1a8.7 8.7 0 0 1-4.3-3.8c-.3-.6.3-.5.9-1.7a.6.6 0 0 0 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4 3.6 3.6 0 0 0-1.1 2.7 6.3 6.3 0 0 0 1.3 3.3 14.4 14.4 0 0 0 5.5 4.9c2 .9 2.8.9 3.8.8a3.3 3.3 0 0 0 2.1-1.5 2.7 2.7 0 0 0 .2-1.5c-.1-.2-.3-.3-.6-.4z"/></svg>';
 const TEL_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>';
@@ -332,7 +334,7 @@ const newestFirst = (a, b) => b.code.localeCompare(a.code);
 
 function listingPage(x, live) {
   const [n, u] = sizeOf(x), [main, unit2, total] = priceTxt(x);
-  const title = `${x.cat} للبيع في ${x.area} - ${n} ${u} | ${NAME} مستشار عقاري`;
+  const title = `${catNoun(x.cat)} للبيع في ${x.area} - ${n} ${u} | ${NAME} مستشار عقاري`;
   const desc = `${x.title} في ${x.area}، مساحة ${n} ${u}. ${main}${unit2 ? " " + unit2 : ""}. كود ${x.code}. للاستفسار والمعاينة مع ${NAME}، مستشار عقاري في يعفور وقرى الشام: ${PHONE_LOCAL}.`;
   const canonical = `${BASE}/listing/${x.code}.html`;
   const offer = { "@type": "Offer", priceCurrency: "USD", availability: "https://schema.org/InStock" };
@@ -341,7 +343,7 @@ function listingPage(x, live) {
     "@context": "https://schema.org", "@type": "RealEstateListing", name: x.title, url: canonical,
     description: desc, datePosted: dayOf(x.updatedAt) || today(), dateModified: dayOf(x.confirmedAt || x.updatedAt) || today(), inLanguage: "ar",
     about: {
-      "@type": "Place", name: `${x.cat} في ${x.area}`,
+      "@type": "Place", name: `${catNoun(x.cat)} في ${x.area}`,
       address: { "@type": "PostalAddress", addressLocality: x.area, addressRegion: regionOf(x.area), addressCountry: "SY" }
     },
     offers: offer
@@ -793,7 +795,7 @@ const priceLine = x => {
 };
 const llmsSummary = x => {
   const [n, u] = sizeOf(x);
-  return [`${x.cat} في ${x.area}`, `${n} ${u}`.trim(), priceLine(x) + (x.confirmed !== false && x.nego ? " (قابل للتفاوض)" : ""), x.papers || ""].filter(Boolean).join("، ");
+  return [`${catNoun(x.cat)} في ${x.area}`, `${n} ${u}`.trim(), priceLine(x) + (x.confirmed !== false && x.nego ? " (قابل للتفاوض)" : ""), x.papers || ""].filter(Boolean).join("، ");
 };
 function llmsTxt(live, cols) {
   const days = live.map(x => dayOf(x.confirmedAt || x.updatedAt)).filter(Boolean).sort(), last = days[days.length - 1] || today();
@@ -1803,7 +1805,8 @@ function save() {
   const code = toLatinDigits($("f_code").value).trim().toUpperCase();
   if (!/^MK-\d{3}$/.test(code)) return fail("الكود لازم يكون بصيغة MK-022.", "f_code");
   if (!editing && ROWS.some(r => r.code === code)) return fail("الكود " + code + " مستعمل من قبل.", "f_code");
-  const title = $("f_title").value.trim();
+  /* نقطة أو فاصلة في آخر العنوان تظهر في عنوان الصفحة ووصفها ("صحنايا. في صحنايا"): نشيلها */
+  const title = $("f_title").value.trim().replace(/[\s.،,:;؛!؟?–—-]+$/u, "");
   if (!title) return fail("اكتب عنوان العقار.", "f_title");
   const m2 = inputToM2(), bua = parseNum($("f_bua").value);
   if (!m2 && !(isFinite(bua) && bua > 0)) return fail("لازم مساحة أرض أو مساحة بناء.", "f_land");

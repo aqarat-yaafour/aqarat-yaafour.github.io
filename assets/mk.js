@@ -6,8 +6,15 @@ document.documentElement.classList.add('js');
 const $ = id => document.getElementById(id);
 const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
 const eo = x => 1 - Math.pow(1 - x, 3);
-const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* The OS "reduce motion" setting (common on laptops, and switched on by some battery savers) freezes the whole site.
+   We still honour it for autonomous motion, but the 3D scene stays DRAGGABLE/TAPPABLE, and the visitor can switch full motion on
+   (remembered in this browser; also ?motion=1). */
+const OS_REDUCE = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let FORCED = false; try { FORCED = localStorage.getItem('mk_motion') === '1' || /[?&]motion=1/.test(location.search); } catch (e) { FORCED = /[?&]motion=1/.test(location.search); }
+const reduce = OS_REDUCE && !FORCED;
 if (reduce) document.documentElement.classList.add('no-anim');
+let ACTIVE_UNTIL = 0;                       // a burst of drawing after any user input, even in reduced-motion mode
+const poke = (ms = 2600) => { ACTIVE_UNTIL = performance.now() + ms; };
 const B = document.body, UP = B.dataset.up || '', PHONE = B.dataset.phone || '963996606813';
 const HOME = B.classList.contains('pg-index');
 const WA = 'https://wa.me/' + PHONE + '?text=';
@@ -280,7 +287,7 @@ function plotsCard(sel) {
   [...$('pcDots').children].forEach((d, i) => d.classList.toggle('on', i === sel));
 }
 function plotGo(d) {
-  if (!PLS.items.length) return; const n = PLS.items.length; PLS.lastUser = performance.now();
+  if (!PLS.items.length) return; const n = PLS.items.length; PLS.lastUser = performance.now(); poke(3500);
   PLS.tgt = (((PLS.tgt != null ? PLS.tgt : PLS.cardSel) + d) % n + n) % n;
 }
 function plotTap(px, py) {
@@ -418,15 +425,16 @@ function drawTile(now) {
 function bindStage(el, tapFn) {
   let down = false, lastX = 0, tap = null;
   const steer = e => { const r = el.getBoundingClientRect(); STEER.tx = clamp((e.clientX - r.left) / r.width * 2 - 1, -1, 1); STEER.ty = clamp((e.clientY - r.top) / r.height * 2 - 1, -1, 1); };
-  el.addEventListener('pointerdown', e => { tap = { x: e.clientX, y: e.clientY, t: performance.now(), moved: false }; PLS.lastUser = performance.now(); down = true; lastX = e.clientX; S3.drag = true; S3.vyaw = 0; steer(e); const h = $('thint'); if (h) h.style.opacity = 0; });
+  el.addEventListener('pointerdown', e => { poke(); tap = { x: e.clientX, y: e.clientY, t: performance.now(), moved: false }; PLS.lastUser = performance.now(); down = true; lastX = e.clientX; S3.drag = true; S3.vyaw = 0; steer(e); const h = $('thint'); if (h) h.style.opacity = 0; });
   el.addEventListener('pointermove', e => {
+    if (down || e.pointerType === 'mouse') poke();
     if (tap && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 9) tap.moved = true;
     if (down) { const dx = e.clientX - lastX; lastX = e.clientX; S3.yaw += dx * .0085; S3.vyaw = S3.vyaw * .5 + dx * .0085 * .5; }
     if (e.pointerType === 'mouse' || down) steer(e);
   });
   const up = e => {
     if (e && e.type === 'pointerup' && tapFn && tap && !tap.moved && performance.now() - tap.t < 450) { const r = cv.getBoundingClientRect(); tapFn(e.clientX - r.left, e.clientY - r.top); }
-    tap = null; down = false; S3.drag = false; STEER.tx = 0; STEER.ty = 0; PLS.lastUser = performance.now();
+    poke(); tap = null; down = false; S3.drag = false; STEER.tx = 0; STEER.ty = 0; PLS.lastUser = performance.now();
   };
   ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => el.addEventListener(ev, up));
 }
@@ -510,6 +518,15 @@ document.querySelectorAll('.cover[data-cat]').forEach((el, i) => { el.innerHTML 
   });
 })();
 
+/* ---------- motion switch: only for visitors whose system asks for reduced motion ---------- */
+if (OS_REDUCE) {
+  const flip = () => { try { localStorage.setItem('mk_motion', FORCED ? '0' : '1'); location.reload(); } catch (e) { location.search = FORCED ? '' : '?motion=1'; } };
+  const mkBtn = (cls, txt) => { const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = txt; b.addEventListener('click', flip); b.addEventListener('pointerdown', e => e.stopPropagation()); return b; };
+  if (!FORCED && HERO) heroEl.appendChild(mkBtn('motion-pill', 'الحركة موقوفة بإعداد جهازك · شغّلها'));
+  const ft = document.querySelector('footer.site');
+  if (ft) { const d = document.createElement('div'); d.appendChild(mkBtn('motion-link', FORCED ? 'إيقاف الحركة' : 'تشغيل الحركة')); ft.appendChild(d); }
+}
+
 /* ---------- one loop: scroll-driven motion + the 3D canvases ---------- */
 let REVEAL = [...document.querySelectorAll('.rv')], COUNTS = [...document.querySelectorAll('[data-count]')], ROWSEL = [...document.querySelectorAll('.row')];
 let lastY = scrollY, VEL = 0, lastT = performance.now(), m1x = 0, m2x = 0;
@@ -540,8 +557,9 @@ function frame(now) {
   }
   STEER.x += (STEER.tx - STEER.x) * .08; STEER.y += (STEER.ty - STEER.y) * .08;
   const heroOn = HERO && y < vh * 1.05, tileOn = TILEV && TILE.vis;
-  if (heroOn) { if (!reduce || staticDirty) { staticDirty = false; drawPlots(now); } }
-  if (tileOn) { if (!reduce || staticDirty) { staticDirty = false; drawTile(now); } }
+  const act = performance.now() < ACTIVE_UNTIL || S3.drag || Math.abs(S3.vyaw) > .0006;   // the user is (or just was) steering the scene
+  if (heroOn) { if (!reduce || staticDirty || act) { staticDirty = false; drawPlots(now); } }
+  if (tileOn) { if (!reduce || staticDirty || act) { staticDirty = false; drawTile(now); } }
   /* quality governor: if the 3D canvas stays under ~30fps for 40 frames, lower its resolution one step */
   if ((heroOn || tileOn) && !reduce && raw < 200) {
     govN++; govT += raw;

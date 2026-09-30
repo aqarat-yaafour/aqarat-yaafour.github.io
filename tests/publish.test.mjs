@@ -3,8 +3,8 @@ import { chromium } from './pw.mjs';
 import fs from 'node:fs'; import path from 'node:path';
 const REPO = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
 const store = { blobs: {}, commits: [], trees: [] };            // captured writes
-const pub = JSON.parse(fs.readFileSync(REPO + '/data.json', 'utf8'));
-const CAT_AR = { land: 'أرض', villa: 'فيلا', farm: 'مزرعة', apt: 'شقة' };
+const pub = JSON.parse(fs.readFileSync(REPO + '/tests/fixtures/data.json', 'utf8'));
+const CAT_AR = { land: 'أرض', villa: 'فيلا', farm: 'مزرعة', apt: 'شقة', invest: 'استثماري' };
 const priv = pub.map(p => ({ code: p.code, status: 'متاح', cat: CAT_AR[p.cat], title: p.title, area: p.area, area_m2: p.area_m2, bua: p.bua, mode: p.mode === 'dunam' ? 'للدنم' : 'مقطوع', price: p.price, nego: !!p.nego, confirmed: !p.unconfirmed, papers: p.papers || '', feats: p.feats || [], photos: [], note: p.note || '', src_place: '', src_by: '', commission: '', src_notes: '' }));
 const existing = ['data.json', 'index.html', 'sitemap.xml', 'style.css', 'yaafour.html', 'villas-yaafour.html', 'land-yaafour.html', 'qura-alsham.html', 'villas-qura-alsham.html', ...pub.map(p => `listing/${p.code}.html`), 'img/mohammad-khaled.jpg', 'img/MK-012-1.jpg', 'p/aenk2cjiss3gw5q6ujfg.html', 'assets/mk.css', 'assets/mk.js'];
 const b64 = t => Buffer.from(t, 'utf8').toString('base64');

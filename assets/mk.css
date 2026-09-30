@@ -239,7 +239,7 @@ footer.site a{color:var(--gold2)}
 .nf b{font:var(--fdw) clamp(110px,34vw,260px) var(--fd);line-height:1;color:var(--gold2)}
 .nf p{color:var(--mute);margin:10px 0 24px;max-width:420px;line-height:1.85}
 
-@media (prefers-reduced-motion: reduce){.rv{opacity:1!important;transform:none!important}.w{opacity:1;animation:none}}
+.no-anim .rv{opacity:1!important;transform:none!important}.no-anim .w{opacity:1;animation:none}
 
 /* ===== صفحة «لديك عقار للبيع؟» (قناة المالكين) ===== */
 .steps{list-style:none;counter-reset:s;margin:18px 0 0;padding:0;display:grid;gap:12px}
@@ -256,3 +256,8 @@ footer.site a{color:var(--gold2)}
 .sell-link a,a.sell-f{color:var(--gold2);font-weight:800}
 #sell{margin-top:36px}
 #how,#docs,#faq{margin-top:46px}
+
+/* مفتاح الحركة: يظهر فقط لمن نظامه يطلب تقليل الحركة */
+.motion-pill{position:absolute;top:84px;inset-inline-end:16px;z-index:6;padding:8px 14px;border-radius:999px;border:1px solid rgba(var(--acc-rgb),.5);background:rgba(var(--bg-rgb),.78);color:var(--gold2);font:800 12.5px/1 var(--fb);cursor:pointer;backdrop-filter:blur(8px)}
+.motion-pill:hover{background:rgba(var(--acc-rgb),.22);color:var(--ink)}
+.motion-link{background:none;border:0;color:var(--gold2);font:800 13px/1.6 var(--fb);cursor:pointer;padding:0;text-decoration:underline}

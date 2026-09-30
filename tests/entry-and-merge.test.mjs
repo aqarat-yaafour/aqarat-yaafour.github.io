@@ -1,8 +1,8 @@
 import { chromium } from './pw.mjs';
 import fs from 'node:fs'; import path from 'node:path'; import crypto from 'node:crypto';
 const REPO = new URL('..', import.meta.url).pathname.replace(/\/$/, '');
-const pub = JSON.parse(fs.readFileSync(REPO + '/data.json', 'utf8'));
-const CAT_AR = { land: 'أرض', villa: 'فيلا', farm: 'مزرعة', apt: 'شقة' };
+const pub = JSON.parse(fs.readFileSync(REPO + '/tests/fixtures/data.json', 'utf8'));
+const CAT_AR = { land: 'أرض', villa: 'فيلا', farm: 'مزرعة', apt: 'شقة', invest: 'استثماري' };
 const mkRows = () => pub.map(p => ({ code: p.code, status: 'متاح', cat: CAT_AR[p.cat], title: p.title, area: p.area, area_m2: p.area_m2, bua: p.bua, mode: p.mode === 'dunam' ? 'للدنم' : 'مقطوع', price: p.price, nego: !!p.nego, confirmed: !p.unconfirmed, papers: p.papers || '', feats: p.feats || [], photos: [], note: p.note || '', src_place: '', src_by: '', commission: '', src_notes: '' }));
 const gsha = buf => crypto.createHash('sha1').update(Buffer.concat([Buffer.from('blob ' + buf.length + '\0'), buf])).digest('hex');
 const remote = { text: '', sha: '' };
