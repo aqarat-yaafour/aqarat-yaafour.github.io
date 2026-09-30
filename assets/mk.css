@@ -240,3 +240,19 @@ footer.site a{color:var(--gold2)}
 .nf p{color:var(--mute);margin:10px 0 24px;max-width:420px;line-height:1.85}
 
 @media (prefers-reduced-motion: reduce){.rv{opacity:1!important;transform:none!important}.w{opacity:1;animation:none}}
+
+/* ===== صفحة «لديك عقار للبيع؟» (قناة المالكين) ===== */
+.steps{list-style:none;counter-reset:s;margin:18px 0 0;padding:0;display:grid;gap:12px}
+.steps li{counter-increment:s;position:relative;padding:14px 16px;padding-inline-start:60px;border:1px solid var(--line);border-radius:18px;background:rgba(var(--bg-rgb),.4)}
+.steps li::before{content:counter(s);position:absolute;inset-inline-start:14px;top:12px;width:34px;height:34px;border-radius:50%;background:var(--gold);color:var(--on-acc);display:grid;place-items:center;font-family:var(--fd);font-size:19px;line-height:1}
+.steps b{display:block;font-weight:800;color:var(--ink)}
+.steps span{display:block;color:var(--mute);font-size:14px;line-height:1.75;margin-top:2px}
+.need{margin:16px 0 0;padding:0;list-style:none;display:grid;gap:8px}
+.need li{position:relative;padding:12px 14px;padding-inline-start:42px;border-radius:14px;border:1px solid var(--line);color:var(--ink2);line-height:1.7}
+.need li::before{content:"✓";position:absolute;inset-inline-start:14px;top:11px;color:var(--gold);font-weight:800}
+.req .hint{font-size:12.5px;color:var(--mute);margin-top:10px;line-height:1.7}
+.sell-err{margin-top:12px;color:#ff9b8a;font-weight:800;font-size:14px}
+.sell-link{margin-top:14px;color:var(--mute);font-size:14px;text-align:center}
+.sell-link a,a.sell-f{color:var(--gold2);font-weight:800}
+#sell{margin-top:36px}
+#how,#docs,#faq{margin-top:46px}

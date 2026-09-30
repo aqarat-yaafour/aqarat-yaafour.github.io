@@ -492,6 +492,24 @@ document.querySelectorAll('.cover[data-cat]').forEach((el, i) => { el.innerHTML 
   });
 })();
 
+/* ---------- «لديك عقار للبيع؟»: owners send their property as a tidy WhatsApp message (nothing is stored) ---------- */
+(() => {
+  const go = $('sellGo'); if (!go) return;
+  const L = s => String(s || '').replace(/[٠-٩]/g, c => String(c.charCodeAt(0) - 1632)).replace(/[۰-۹]/g, c => String(c.charCodeAt(0) - 1776)).replace(/٫/g, '.').replace(/٬/g, ',').trim();
+  go.addEventListener('click', () => {
+    const cat = $('sellCat').value, area = L($('sellArea').value), err = $('sellErr'), miss = [];
+    if (!cat) miss.push('نوع العقار'); if (!area) miss.push('المنطقة');
+    if (miss.length) { err.textContent = 'أكمل: ' + miss.join(' و'); err.hidden = false; (!cat ? $('sellCat') : $('sellArea')).focus(); return; }
+    err.hidden = true;
+    const lines = ['مرحباً أستاذ محمد، عندي عقار للبيع:', '▪️ النوع: ' + cat, '▪️ المنطقة: ' + area];
+    const size = L($('sellSize').value); if (size) lines.push('▪️ المساحة: ' + size + ' ' + $('sellUnit').value);
+    [['sellPapers', 'الأوراق'], ['sellRole', 'صفتي']].forEach(([id, l]) => { const v = $(id).value; if (v) lines.push('▪️ ' + l + ': ' + v); });
+    const price = L($('sellPrice').value); if (price) lines.push('▪️ السعر المتوقع: ' + price);
+    const note = L($('sellNote').value); if (note) lines.push('▪️ ملاحظة: ' + note);
+    window.open(WA + encodeURIComponent(lines.join('\n')), '_blank', 'noopener');
+  });
+})();
+
 /* ---------- one loop: scroll-driven motion + the 3D canvases ---------- */
 let REVEAL = [...document.querySelectorAll('.rv')], COUNTS = [...document.querySelectorAll('[data-count]')], ROWSEL = [...document.querySelectorAll('.row')];
 let lastY = scrollY, VEL = 0, lastT = performance.now(), m1x = 0, m2x = 0;

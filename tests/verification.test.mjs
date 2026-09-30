@@ -135,7 +135,8 @@ await p.evaluate(() => { ROWS.find(r => r.code === 'MK-010').title = 'موقوف
 dialogs = []; answer = false; m = await publishNow(p); ok('suspended / sold listings are never questioned', !dialogs.some(d => /MK-010|MK-011/.test(d)), dialogs.join(' | ').slice(0, 120));
 
 console.log('=== 4) خصوصية ===');
-const leak = []; for (const [k, v] of PUB.files) if (typeof v === 'string' && /\.(html|json|xml)$/.test(k)) for (const r of [/authUntil/, /"checks"/, /بيان قيد عقاري حديث/, /هوية المالك/, /تفويض مكتوب/]) if (r.test(v)) leak.push(k + ' ← ' + r);
+/* بيانات التحقق الفعلية لا تظهر في أي ملف. أمّا العبارات العامة («هوية المالك»…) فمقصود أن تُذكر في صفحة المالكين sell.html كقائمة أوراق عامة، فنستثنيها هناك فقط */
+const leak = []; for (const [k, v] of PUB.files) if (typeof v === 'string' && /\.(html|json|xml)$/.test(k)) for (const r of [/authUntil/, /"checks"/, /بيان قيد عقاري حديث/, /هوية المالك/, /تفويض مكتوب/]) { if (k === 'sell.html' && /بيان|هوية|تفويض/.test(r.source)) continue; if (r.test(v)) leak.push(k + ' ← ' + r); }
 ok('checklist data never appears in any public file', leak.length === 0, JSON.stringify(leak));
 console.log('page errors:', errs);
 await b.close();

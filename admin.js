@@ -235,7 +235,7 @@ async function commit(repo, files, message, deletes, snap, retried) {
 /* ===== مولّد الموقع — التصميم الجديد (زمرّد ملكي + خط جريء عريض) =====
    كل صفحة هنا HTML كامل جاهز لمحركات البحث، ثم يحسّنه assets/mk.css و assets/mk.js
    (وهما ملفان ثابتان في المستودع لا تلمسهما لوحة الإدارة). */
-const ASSET_V = "3";   /* ارفع الرقم عند تعديل mk.css أو mk.js ليُحمَّل الجديد عند الزوار */
+const ASSET_V = "4";   /* ارفع الرقم عند تعديل mk.css أو mk.js ليُحمَّل الجديد عند الزوار */
 const jsonInline = v => JSON.stringify(v).replace(/</g, "\\u003c");   /* آمن داخل <script> */
 const WA_SVG = '<svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3zm5.8 15.7c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1a8.7 8.7 0 0 1-4.3-3.8c-.3-.6.3-.5.9-1.7a.6.6 0 0 0 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4 3.6 3.6 0 0 0-1.1 2.7 6.3 6.3 0 0 0 1.3 3.3 14.4 14.4 0 0 0 5.5 4.9c2 .9 2.8.9 3.8.8a3.3 3.3 0 0 0 2.1-1.5 2.7 2.7 0 0 0 .2-1.5c-.1-.2-.3-.3-.6-.4z"/></svg>';
 const TEL_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>';
@@ -311,6 +311,7 @@ const NAV = up => `<header class="nav">
 const FOOT = () => `<footer class="site">
   <div><b>${NAME}</b> · ${ROLE} · يعفور وقرى الشام، ريف دمشق</div>
   <div>واتساب: <a href="tel:+${PHONE_INTL}" dir="ltr">${PHONE_LOCAL}</a></div>
+  <div><a class="sell-f" href="${BASE}/sell.html">لديك عقار للبيع؟ اعرضه معي</a></div>
   <div>الأسعار والتوفر قابلة للتغيير. الأوراق تُعرض كاملة قبل أي عربون.</div>
 </footer>
 <nav class="dock"><a class="wa" href="${wa("مرحباً أستاذ محمد، أرغب بالاستفسار عن عقار.")}" target="_blank" rel="noopener">${WA_SVG}تواصل على واتساب</a><a class="call" href="tel:+${PHONE_INTL}" aria-label="اتصال">${TEL_SVG}</a></nav>
@@ -508,6 +509,7 @@ function requestHtml(live) {
       <div class="wide"><label for="reqNote">ملاحظة (اختياري)</label><input type="text" id="reqNote" placeholder="مثلاً: قريبة من الأوتوستراد، أو فيها بئر ماء"></div>
     </div>
     <button class="btn btn-primary" type="button" id="reqGo">${WA_SVG}ابعت الطلب على واتساب</button>
+    <p class="sell-link">لديك عقار وتريد بيعه؟ <a href="sell.html">اعرضه معي</a></p>
   </section>`;
 }
 
@@ -694,10 +696,98 @@ ${FOOT()}`;
   return headHtml(title, desc, BASE + "/", jsonld,
     `<script type="application/ld+json">${JSON.stringify(faq)}<\/script>`, null, "pg-index") + body;
 }
+/* ===== «لديك عقار للبيع؟» — قناة المالكين =====
+   النموذج يفتح واتساب برسالة منظمة (mk.js)، ولا يُحفظ شيء على الموقع. */
+function sellPage(live) {
+  const title = "لديك عقار للبيع؟ اعرضه مع محمد خالد | مستشار عقاري في ريف دمشق";
+  const desc = `تريد بيع أرض أو فيلا أو مزرعة أو شقة أو أصل استثماري؟ أرسل بيانات عقارك إلى ${NAME}، ${ROLE}، ونراجع الأوراق معاً قبل أي عرض. واتساب ${PHONE_LOCAL}.`;
+  const canonical = BASE + "/sell.html";
+  const opt = a => a.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+  const areas = AREA_ORDER.filter(a => CORE_AREAS.includes(a) || live.some(x => x.area === a)).map(a => `<option value="${esc(a)}"></option>`).join("");
+  const cats = opt(["أرض", "فيلا", "مزرعة", "شقة", "استثماري أو تجاري", "غير ذلك"]);
+  const faqs = [
+    ["في أي مناطق تقبل العقارات؟", `تخصصي ${CORE_AREAS.join(" و")}، وأنظر أيضاً في عروض المناطق القريبة في ريف دمشق حسب كل حالة.`],
+    ["هل يُنشر السعر؟", "حسب رغبتك: يُعرض السعر، أو يُكتب «السعر عند التواصل» فيصلني المهتمون الجادّون فقط."],
+    ["هل تُنشر صور عقاري للجميع؟", "لا. الصور تُحفظ بشكل خاص، وتُرسل للمهتم الجاد عبر رابط خاص."],
+    ["هل تُحفظ بياناتي على الموقع؟", "لا. النموذج يفتح واتساب برسالة جاهزة تراجعها وترسلها بنفسك."]
+  ];
+  const jsonld = {
+    "@context": "https://schema.org", "@type": "WebPage", name: "لديك عقار للبيع؟", url: canonical, description: desc,
+    about: "بيع العقارات في ريف دمشق",
+    provider: { "@type": "RealEstateAgent", name: NAME, telephone: "+" + PHONE_INTL, url: BASE + "/" }
+  };
+  const extra = `<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
+    { "@type": "ListItem", position: 1, name: "العقارات", item: BASE + "/" }, { "@type": "ListItem", position: 2, name: "لديك عقار للبيع؟", item: canonical }] })}<\/script>
+<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", mainEntity: faqs.map(([q, a]) => ({ "@type": "Question", name: q, acceptedAnswer: { "@type": "Answer", text: a } })) })}<\/script>`;
+  const body = `${NAV("")}
+<main class="lpage">
+  <div class="wrap">
+    <nav class="crumbs"><a href="index.html">العقارات</a> <span>›</span> <span>لديك عقار للبيع؟</span></nav>
+    <div class="chead">
+      <div class="eyebrow"><i></i>للملاك والوكلاء</div>
+      <h1>لديك عقار للبيع؟</h1>
+    </div>
+    <p class="lead">أرسل بيانات عقارك، ونراجع الأوراق معاً قبل أي عرض. أنا ${NAME}، ${ROLE} أعمل في ${CORE_AREAS.join(" و")} بريف دمشق، وأنظر في كل عرض على حدة.</p>
+
+    <section class="rv" id="how">
+      <h2 class="h2">كيف نشتغل</h2>
+      <ol class="steps">
+        <li><b>ترسل بيانات العقار</b><span>من النموذج أدناه، وتصلني برسالة واتساب مرتبة.</span></li>
+        <li><b>أراجع الأوراق معك</b><span>أتحقق من الملكية ونوع السند والترخيص قبل أي عرض.</span></li>
+        <li><b>نتفق على التفويض</b><span>السعر ومدة العرض وشروط الوساطة، بوضوح، قبل النشر.</span></li>
+        <li><b>أنشر العقار</b><span>بصفحة خاصة به على هذا الموقع وبطاقة تُشارَك على واتساب.</span></li>
+        <li><b>أرافق المشترين</b><span>من المعاينة حتى التسجيل.</span></li>
+      </ol>
+    </section>
+
+    <section class="req rv" id="sell">
+      <p class="kicker">عرض جديد</p>
+      <h2 class="h2">أرسل بيانات عقارك</h2>
+      <p class="lead">اكتب ما تعرفه الآن، وما لا تعرفه اتركه فارغاً. الحقول التي عليها * مطلوبة.</p>
+      <div class="fields">
+        <div><label for="sellCat">نوع العقار *</label><select id="sellCat"><option value="">اختر النوع</option>${cats}</select></div>
+        <div><label for="sellArea">المنطقة *</label><input id="sellArea" list="sellAreas" maxlength="60" placeholder="مثلاً: صحنايا" autocomplete="off"><datalist id="sellAreas">${areas}</datalist></div>
+        <div><label for="sellSize">المساحة</label><input id="sellSize" inputmode="decimal" maxlength="14" placeholder="مثلاً: 8.5" autocomplete="off"></div>
+        <div><label for="sellUnit">الوحدة</label><select id="sellUnit"><option value="دنم">دنم</option><option value="م²">م²</option></select></div>
+        <div><label for="sellPapers">نوع الأوراق</label><select id="sellPapers"><option value="">لا أعرف / غير محدد</option>${opt(["طابو أخضر", "حكم محكمة", "وكالة"])}</select></div>
+        <div><label for="sellRole">صفتك</label><select id="sellRole">${opt(["مالك", "وكيل عن المالك", "وسيط"])}</select></div>
+        <div class="wide"><label for="sellPrice">السعر المتوقع (اختياري)</label><input id="sellPrice" maxlength="60" placeholder="مثلاً: 250 ألف $ للدنم" autocomplete="off"></div>
+        <div class="wide"><label for="sellNote">ملاحظة (اختياري)</label><input id="sellNote" maxlength="300" placeholder="الموقع بالتحديد، أبنية قائمة، ترخيص…" autocomplete="off"></div>
+      </div>
+      <p class="sell-err" id="sellErr" role="alert" hidden></p>
+      <button class="btn btn-primary" type="button" id="sellGo">${WA_SVG}أرسل عقارك على واتساب</button>
+      <p class="hint">لا يُحفظ شيء على الموقع: تُفتح رسالة جاهزة في واتساب تراجعها وترسلها بنفسك.</p>
+    </section>
+
+    <section class="rv" id="docs">
+      <h2 class="h2">الأوراق التي سأحتاجها</h2>
+      <ul class="need">
+        <li>هوية المالك، أو وكالة رسمية إن كنت وكيلاً.</li>
+        <li>بيان قيد عقاري حديث.</li>
+        <li>صور حديثة للعقار.</li>
+        <li>الترخيص أو المخطط التنظيمي إن وُجد (مهم للأراضي والأصول الاستثمارية).</li>
+        <li>تفويض بالبيع نوقّعه معاً قبل النشر.</li>
+      </ul>
+      <p class="lead">تكفي بيانات النموذج الآن، والأوراق نرتّبها في المحادثة.</p>
+    </section>
+
+    <section class="rv" id="faq">
+      <h2 class="h2">أسئلة المالكين</h2>
+      <dl class="faq">${faqs.map(([q, a]) => `<dt>${esc(q)}</dt><dd>${esc(a)}</dd>`).join("")}</dl>
+    </section>
+    <div class="actions">
+      <a class="btn btn-ghost" target="_blank" rel="noopener" href="${wa("مرحباً أستاذ محمد، عندي عقار للبيع وأرغب بالاستفسار.")}">${WA_SVG}أفضّل التحدث مباشرة</a>
+      <a class="btn btn-ghost" href="index.html">كل العقارات</a>
+    </div>
+  </div>
+</main>
+${FOOT()}`;
+  return headHtml(title, desc, canonical, jsonld, extra, null, "pg-collection") + body;
+}
 function sitemapXml(live) {
   const days = live.map(x => dayOf(x.updatedAt)).filter(Boolean).sort();
   const last = days[days.length - 1] || today();
-  const urls = [[BASE + "/", "1.0", last]]
+  const urls = [[BASE + "/", "1.0", last], [BASE + "/sell.html", "0.6", last]]
     .concat(collectionsAll(live).map(c => [`${BASE}/${c.slug}`, "0.9", last]))
     .concat(live.map(x => [`${BASE}/listing/${x.code}.html`, "0.8", dayOf(x.updatedAt) || last]));
   return '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
@@ -1739,6 +1829,7 @@ function validateOutput(files, live, cols, pubHas) {
       try { JSON.parse(j[1]); } catch (e) { add(`${p}: البيانات المنظمة معطوبة`); }
     }
   }
+  if (!byPath.has("sell.html")) add("صفحة sell.html غير موجودة");
   const data = byPath.get("data.json");
   try {
     const arr = JSON.parse(data.content);
@@ -1757,7 +1848,7 @@ function validateOutput(files, live, cols, pubHas) {
   }
   for (const c of cols) if (!byPath.has(c.slug)) add(`صفحة ${c.slug} غير موجودة`);
   const sm = byPath.get("sitemap.xml");
-  if (sm && (sm.content.match(/<loc>/g) || []).length !== 1 + cols.length + live.length) add("خريطة الموقع لا تطابق الصفحات");
+  if (sm && (sm.content.match(/<loc>/g) || []).length !== 2 + cols.length + live.length) add("خريطة الموقع لا تطابق الصفحات");
   if (bad.length) throw new Error("فحص الجودة أوقف النشر (الموقع ما تغيّر): " + bad.join(" · "));
 }
 
@@ -1981,6 +2072,7 @@ async function publish() {
       { path: "index.html", content: indexPage(live) },
       { path: "sitemap.xml", content: sitemapXml(live) }
     ];
+    files.push({ path: "sell.html", content: sellPage(live) });
     for (const c of cols) files.push({ path: c.slug, content: collectionPage(c, cols) });
     for (const x of live) files.push({ path: `listing/${x.code}.html`, content: listingPage(x, live) });
 
