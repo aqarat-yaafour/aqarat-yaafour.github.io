@@ -339,14 +339,14 @@ function listingPage(x, live) {
   if (total) offer.price = Math.round(total);
   const jsonld = {
     "@context": "https://schema.org", "@type": "RealEstateListing", name: x.title, url: canonical,
-    description: desc, datePosted: dayOf(x.updatedAt) || today(),
+    description: desc, datePosted: dayOf(x.updatedAt) || today(), dateModified: dayOf(x.confirmedAt || x.updatedAt) || today(), inLanguage: "ar",
     about: {
       "@type": "Place", name: `${x.cat} في ${x.area}`,
       address: { "@type": "PostalAddress", addressLocality: x.area, addressRegion: regionOf(x.area), addressCountry: "SY" }
     },
     offers: offer
   };
-  jsonld.broker = { "@type": "RealEstateAgent", name: NAME, telephone: "+" + PHONE_INTL, areaServed: ["يعفور", "قرى الشام", "الصبورة", "ريف دمشق"], url: BASE + "/" };
+  jsonld.broker = { "@type": "RealEstateAgent", "@id": BASE + "/#agent", name: NAME, telephone: "+" + PHONE_INTL, areaServed: ["يعفور", "قرى الشام", "الصبورة", "ريف دمشق"], url: BASE + "/" };
   const areaPage = AREA_SLUG[x.area] + ".html";
   const crumbs = {
     "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
@@ -577,7 +577,7 @@ function collectionPage(c, cols) {
         "@type": "ListItem", position: i + 1, url: `${BASE}/listing/${x.code}.html`, name: x.title
       }))
     },
-    provider: { "@type": "RealEstateAgent", name: NAME, telephone: "+" + PHONE_INTL, url: BASE + "/" }
+    provider: { "@type": "RealEstateAgent", "@id": BASE + "/#agent", name: NAME, telephone: "+" + PHONE_INTL, url: BASE + "/" }
   };
   const crumbs = {
     "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
@@ -615,7 +615,7 @@ function indexPage(live) {
   const title = "عقارات يعفور وقرى الشام والصبورة | أراضٍ وفلل ومزارع للبيع - محمد خالد";
   const desc = `أراضٍ وفلل ومزارع وشقق للبيع في يعفور وقرى الشام والصبورة بريف دمشق. ${live.length} عقاراً متاحاً مع ${NAME}، ${ROLE} — مرافقة من المعاينة حتى التسجيل. واتساب ${PHONE_LOCAL}.`;
   const jsonld = {
-    "@context": "https://schema.org", "@type": "RealEstateAgent", name: NAME, jobTitle: ROLE,
+    "@context": "https://schema.org", "@type": "RealEstateAgent", "@id": BASE + "/#agent", name: NAME, jobTitle: ROLE,
     url: BASE + "/", telephone: "+" + PHONE_INTL, image: ogImage(null), description: desc,
     areaServed: AREAS.map(a => ({ "@type": "Place", name: a })),
     address: { "@type": "PostalAddress", addressLocality: "يعفور", addressRegion: "ريف دمشق", addressCountry: "SY" },
@@ -714,7 +714,7 @@ function sellPage(live) {
   const jsonld = {
     "@context": "https://schema.org", "@type": "WebPage", name: "لديك عقار للبيع؟", url: canonical, description: desc,
     about: "بيع العقارات في ريف دمشق",
-    provider: { "@type": "RealEstateAgent", name: NAME, telephone: "+" + PHONE_INTL, url: BASE + "/" }
+    provider: { "@type": "RealEstateAgent", "@id": BASE + "/#agent", name: NAME, telephone: "+" + PHONE_INTL, url: BASE + "/" }
   };
   const extra = `<script type="application/ld+json">${JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
     { "@type": "ListItem", position: 1, name: "العقارات", item: BASE + "/" }, { "@type": "ListItem", position: 2, name: "لديك عقار للبيع؟", item: canonical }] })}<\/script>
@@ -783,6 +783,69 @@ function sellPage(live) {
 </main>
 ${FOOT()}`;
   return headHtml(title, desc, canonical, jsonld, extra, null, "pg-collection") + body;
+}
+/* ===== ملفات للمساعدات الذكية: llms.txt (موجز بالروابط) و llms-full.txt (تفاصيل كل عقار) =====
+   من العقارات المتاحة فقط، والسعر المخفي يبقى مخفياً، ولا يدخل فيها أي حقل خاص. */
+const priceLine = x => {
+  if (x.confirmed === false) return "السعر عند التواصل";
+  const [main, unit2, total] = priceTxt(x);
+  return unit2 === "للدنم" ? `${main} للدنم (الإجمالي ${money(total)})` : main;
+};
+const llmsSummary = x => {
+  const [n, u] = sizeOf(x);
+  return [`${x.cat} في ${x.area}`, `${n} ${u}`.trim(), priceLine(x) + (x.confirmed !== false && x.nego ? " (قابل للتفاوض)" : ""), x.papers || ""].filter(Boolean).join("، ");
+};
+function llmsTxt(live, cols) {
+  const days = live.map(x => dayOf(x.confirmedAt || x.updatedAt)).filter(Boolean).sort(), last = days[days.length - 1] || today();
+  const L = (t, u, d) => `- [${t}](${BASE}/${u})` + (d ? `: ${d}` : "");
+  const areaCols = cols.filter(c => c.slug === AREA_SLUG[c.area] + ".html");
+  const catCols = cols.filter(c => !areaCols.includes(c));
+  return `# ${NAME} — ${ROLE} في ${CORE_AREAS.join(" و")}
+
+> وسيط عقاري في ريف دمشق (سوريا) يعرض أراضٍ وفللاً ومزارع وشققاً وأصولاً استثمارية للبيع، ويرافق المشتري من المعاينة والتحقق من الأوراق حتى التسجيل. التواصل عبر واتساب: +${PHONE_INTL} (${PHONE_LOCAL}).
+
+- الأسعار بالدولار الأمريكي (USD). «السعر عند التواصل» تعني أن السعر غير معلن.
+- عدد العقارات المتاحة الآن: ${live.length}. آخر تحديث: ${last}.
+- صور العقارات لا تُنشر علناً؛ تُرسل للمهتم الجاد عبر رابط خاص عند الطلب.
+- للتأكد من توفر عقار وسعره الحالي، التواصل المباشر هو المرجع.
+
+## الصفحات الرئيسية
+${L("الصفحة الرئيسية", "", "عقارات مختارة والبحث والتصفية")}
+${L("لديك عقار للبيع؟", "sell.html", "صفحة للملاك والوكلاء لعرض عقاراتهم")}
+${L("ملف كامل للعقارات", "llms-full.txt", "تفاصيل كل عقار متاح")}
+
+## المناطق
+${areaCols.map(c => L("عقارات " + c.area, c.slug, `${nProp(c.items.length)} متاحة، ${regionOf(c.area)}`)).join("\n") || "- لا شيء حالياً"}
+${catCols.length ? "\n## الأصناف حسب المنطقة\n" + catCols.map(c => L(c.h1, c.slug, nProp(c.items.length))).join("\n") : ""}
+
+## العقارات المتاحة
+${live.slice().sort(newestFirst).map(x => L(x.title, `listing/${x.code}.html`, llmsSummary(x) + `. كود ${x.code}`)).join("\n") || "- لا شيء حالياً"}
+
+## Optional
+${L("وصف كامل لكل عقار", "llms-full.txt")}
+${L("خريطة الموقع", "sitemap.xml")}
+`;
+}
+function llmsFull(live) {
+  const last = live.map(x => dayOf(x.confirmedAt || x.updatedAt)).filter(Boolean).sort().pop() || today();
+  const blocks = live.slice().sort(newestFirst).map(x => {
+    const [n, u] = sizeOf(x), lines = [`### ${x.code} — ${x.title}`,
+      `- النوع: ${x.cat}`, `- المنطقة: ${x.area}، ${regionOf(x.area)}`];
+    if (x.area_m2) lines.push(`- مساحة الأرض: ${n} ${u}` + (u === "دنم" ? ` (${(+x.area_m2).toLocaleString("en-US")} م²)` : ""));
+    if (x.bua) lines.push(`- مساحة البناء: ${x.bua} م²`);
+    lines.push(`- السعر: ${priceLine(x)}` + (x.confirmed !== false && x.nego ? " (قابل للتفاوض)" : ""));
+    if (x.papers) lines.push(`- الأوراق: ${x.papers}`);
+    if ((x.feats || []).length) lines.push(`- المزايا: ${x.feats.join("، ")}`);
+    if (x.note) lines.push(`- وصف: ${String(x.note).replace(/\s+/g, " ").trim()}`);
+    lines.push(`- الصفحة: ${BASE}/listing/${x.code}.html`);
+    return lines.join("\n");
+  });
+  return `# ${NAME} — العقارات المتاحة (تفاصيل كاملة)
+
+> ${ROLE} في ${CORE_AREAS.join(" و")} بريف دمشق. الأسعار بالدولار الأمريكي (USD). آخر تحديث: ${last}. للتأكد من التوفر والسعر الحالي: واتساب +${PHONE_INTL}.
+
+${blocks.join("\n\n") || "لا توجد عقارات متاحة حالياً."}
+`;
 }
 function sitemapXml(live) {
   const days = live.map(x => dayOf(x.updatedAt)).filter(Boolean).sort();
@@ -1821,7 +1884,7 @@ function validateOutput(files, live, cols, pubHas) {
   const has = p => byPath.has(p) || pubHas.has(p);
   for (const f of files) {
     const p = f.path, c = f.content;
-    if (typeof c !== "string" || p.startsWith(GAL_DIR + "/") || !/\.(html|xml)$/.test(p)) continue;
+    if (typeof c !== "string" || p.startsWith(GAL_DIR + "/") || !/\.(html|xml|txt)$/.test(p)) continue;
     const m = c.match(/undefined|\bNaN\b|\[object /);
     if (m) add(`${p}: فيه «${m[0]}»`);
     if (/\.html$/.test(p) && (c.length < 1000 || !/^<!doctype html>/i.test(c))) add(`${p}: صفحة ناقصة`);
@@ -1830,6 +1893,7 @@ function validateOutput(files, live, cols, pubHas) {
     }
   }
   if (!byPath.has("sell.html")) add("صفحة sell.html غير موجودة");
+  for (const f of ["llms.txt", "llms-full.txt"]) if (!byPath.has(f) || byPath.get(f).content.length < 200) add(f + " ناقص أو غير موجود");
   const data = byPath.get("data.json");
   try {
     const arr = JSON.parse(data.content);
@@ -2072,7 +2136,7 @@ async function publish() {
       { path: "index.html", content: indexPage(live) },
       { path: "sitemap.xml", content: sitemapXml(live) }
     ];
-    files.push({ path: "sell.html", content: sellPage(live) });
+    files.push({ path: "sell.html", content: sellPage(live) }, { path: "llms.txt", content: llmsTxt(live, cols) }, { path: "llms-full.txt", content: llmsFull(live) });
     for (const c of cols) files.push({ path: c.slug, content: collectionPage(c, cols) });
     for (const x of live) files.push({ path: `listing/${x.code}.html`, content: listingPage(x, live) });
 
