@@ -26,7 +26,7 @@ function resize() { if (!cv) return; DPR = Math.min(DPRCAP, devicePixelRatio || 
 function setCanvas(el) { cv = el; ctx = el.getContext('2d'); resize(); }
 addEventListener('resize', () => { resize(); if (typeof FIT !== 'undefined') { FIT.key = ''; FIT.dirty = true; } staticDirty = true; });
 
-const TYPES = { land: 'أرض', villa: 'فيلا', farm: 'مزرعة', apt: 'شقة' };
+const TYPES = { land: 'أرض', villa: 'فيلا', farm: 'مزرعة', apt: 'شقة', invest: 'استثماري' };
 /* What to showcase is decided by the data, never by a hand-typed list:
    listings flagged `featured` first, then the newest by code number, with at least one of each type when it exists. */
 const codeNum = x => +(String(x.code || '').match(/\d+/) || [0])[0];
@@ -34,7 +34,7 @@ function pickShowcase(max) {
   const rank = (a, b) => (b.featured ? 1 : 0) - (a.featured ? 1 : 0) || codeNum(b) - codeNum(a);
   const byNew = [...DATA].sort(rank), out = [], seen = new Set();
   const add = x => { if (x && !seen.has(x.code) && out.length < max) { seen.add(x.code); out.push(x); } };
-  for (const c of ['villa', 'land', 'farm', 'apt']) add(byNew.find(d => d.cat === c));
+  for (const c of ['villa', 'land', 'farm', 'apt', 'invest']) add(byNew.find(d => d.cat === c));
   byNew.forEach(add);
   return out.sort(rank);
 }
@@ -182,6 +182,10 @@ function coverArt(x, seed) {
     art += `<path d="M20 235 C120 220 260 240 380 226" stroke="${g}" stroke-opacity=".4" fill="none"/>`;
     for (let i = 0; i < 9; i++) { const cx = 30 + i * 42 + r(i) * 10, cy = 195 + r(i + 5) * 20, rr = 16 + r(i + 1) * 12; art += `<circle cx="${cx}" cy="${cy}" r="${rr}" fill="${g}" fill-opacity=".1" stroke="${g}" stroke-opacity=".55"/><path d="M${cx} ${cy + rr} V${cy + rr + 14}" stroke="${g}" stroke-opacity=".5"/>`; }
     art += `<path d="M150 140 L200 102 L250 140 V180 H150Z" fill="${THEME.bg2}" stroke="${g}" stroke-width="1.6"/>`;
+  } else if (x.cat === 'invest') {
+    art += `<path d="M0 256 H400" stroke="${g}" stroke-opacity=".5" stroke-width="3"/><path d="M0 268 H400" stroke="${g}" stroke-opacity=".3" stroke-dasharray="12 9"/><rect x="50" y="160" width="200" height="86" fill="none" stroke="${g}" stroke-width="1.6"/><rect x="250" y="70" width="100" height="176" fill="none" stroke="${g}" stroke-width="1.6"/><path d="M44 160 H256 M244 70 H356" stroke="${g}" stroke-width="3"/>`;
+    for (let xx = 64; xx < 240; xx += 36) for (const yy of [174, 204]) art += `<rect x="${xx}" y="${yy}" width="22" height="16" fill="${g}" fill-opacity="${.1 + r(xx + yy) * .22}" stroke="${g}" stroke-opacity=".5"/>`;
+    for (let yy = 86; yy < 230; yy += 28) for (const xx of [266, 306]) art += `<rect x="${xx}" y="${yy}" width="24" height="14" fill="${g}" fill-opacity="${.08 + r(xx + yy) * .22}" stroke="${g}" stroke-opacity=".5"/>`;
   } else {
     art += `<rect x="130" y="50" width="140" height="200" fill="none" stroke="${g}" stroke-width="1.6"/>`;
     for (let yy = 70; yy < 230; yy += 30) for (let xx = 145; xx < 260; xx += 32) art += `<rect x="${xx}" y="${yy}" width="20" height="16" fill="${g}" fill-opacity="${.08 + r(xx + yy) * .25}" stroke="${g}" stroke-opacity=".5"/>`;
@@ -233,6 +237,20 @@ function tileLocal(x, seed) {
     if (pool) poolAt(-.7 * h, .5 * h, -.15 * h, .85 * h);
     if (well || !pool) wellAt(-.62 * h, .68 * h);
     labelY = 1.25;
+  } else if (kind === 'invest') {                                 // an investment asset: built ÷ land sets the complex, the frontage draws its road
+    const cover = Math.max(.25, Math.min(1, (x.bua || 0) / Math.max(1, x.area_m2 || (x.bua || 1) * 2))), big = cover > .55;
+    const fl = floorsOf(x, big ? 3 : 2), fh = .34, hh = fh * fl + .12, win = [];
+    for (let f = 0; f < fl; f++) for (const u of [-.52, -.17, .17, .52]) win.push([u * h, -fh * (fl - 1) / 2 + f * fh - .02, .22 * h, .15]);
+    if (said(x, 'أوتستراد', 'واجهة', 'شارع', 'طريق')) P.push(...box(0, top + .02, .88 * h, 1.98 * h, .04, .22 * h, 'tile'), zb(Lp([[-.94 * h, top + .05, .88 * h], [.94 * h, top + .05, .88 * h]], 'acc2', .8, 1.2, 1, 1)));
+    P.push(...box(-.12 * h, top + hh / 2, .22 * h, 1.5 * h, hh, .52 * h, 'main', { front: win }), ...box(-.12 * h, top + hh + .03, .22 * h, 1.6 * h, .06, .52 * h + .1, 'roof'));
+    let tall = hh;
+    if (big || fl >= 3) {
+      tall = hh * 1.75; const tf = Math.round(tall / fh), tw = [];
+      for (let f = 0; f < tf; f++) for (const u of [-.12, .12]) tw.push([u * h, -fh * (tf - 1) / 2 + f * fh - .02, .14 * h, .14]);
+      P.push(...box(.5 * h, top + tall / 2, -.36 * h, .5 * h, tall, .5 * h, 'main', { front: tw }), ...box(.5 * h, top + tall + .03, -.36 * h, .6 * h, .06, .6 * h, 'roof'));
+    }
+    if (said(x, 'تحويل', 'كهرب', 'مولد')) P.push(...box(-.7 * h, top + .16, -.55 * h, .3 * h, .32, .3 * h, 'main', { front: [[0, .02, .12, .14, 'door']] }), Lp([[-.7 * h, top + .34, -.55 * h], [-.7 * h, top + .58, -.55 * h]], 'acc2', .9, 1.3), Dp([-.7 * h, top + .6, -.55 * h], 2, 'acc2', 1));
+    labelY = 1.1 + tall;
   } else {                                                        // apartments, and any type we have not met yet
     const fl = floorsOf(x, kind === 'apt' && said(x, 'أرضي') ? 1 : 4), win = [];
     for (let f = 0; f < fl; f++) for (const u of [-.2, .2]) win.push([u * h, -.34 * (fl - 1) / 2 + f * .34 - .02 + (fl > 1 ? 0 : 0), .2, .18]);

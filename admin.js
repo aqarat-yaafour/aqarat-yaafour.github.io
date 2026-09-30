@@ -10,9 +10,10 @@ const LS = "mk_admin_cfg", LS_DRAFT = "mk_admin_draft";
 const BASE = "https://aqarat-yaafour.github.io";
 const PHONE_INTL = "963996606813", PHONE_LOCAL = "0996 606 813";
 const NAME = "محمد خالد", ROLE = "مستشار عقاري";
-const CAT_EN = { "أرض": "land", "فيلا": "villa", "مزرعة": "farm", "شقة": "apt" };
-const CAT_AR = { land: "أرض", villa: "فيلا", farm: "مزرعة", apt: "شقة" };
-const CATS = ["أرض", "فيلا", "مزرعة", "شقة"];
+const CAT_EN = { "أرض": "land", "فيلا": "villa", "مزرعة": "farm", "شقة": "apt", "استثماري": "invest" };
+const CAT_AR = { land: "أرض", villa: "فيلا", farm: "مزرعة", apt: "شقة", invest: "استثماري" };
+const CATS = ["أرض", "فيلا", "مزرعة", "شقة", "استثماري"];
+const CAT_KEYS = ["land", "villa", "farm", "apt", "invest"];   /* ترتيب التصنيفات في الفلاتر وصفحات الأصناف */
 
 let CFG = null, ROWS = [], BASE_ROWS = "", PRIV_SHA = null, PRIV_BASE = "", editing = null, quickRow = null;
 let feats = [], photos = [], unit = "dunam", mode = "مقطوع", filter = "all", query = "";
@@ -234,7 +235,7 @@ async function commit(repo, files, message, deletes, snap, retried) {
 /* ===== مولّد الموقع — التصميم الجديد (زمرّد ملكي + خط جريء عريض) =====
    كل صفحة هنا HTML كامل جاهز لمحركات البحث، ثم يحسّنه assets/mk.css و assets/mk.js
    (وهما ملفان ثابتان في المستودع لا تلمسهما لوحة الإدارة). */
-const ASSET_V = "2";   /* ارفع الرقم عند تعديل mk.css أو mk.js ليُحمَّل الجديد عند الزوار */
+const ASSET_V = "3";   /* ارفع الرقم عند تعديل mk.css أو mk.js ليُحمَّل الجديد عند الزوار */
 const jsonInline = v => JSON.stringify(v).replace(/</g, "\\u003c");   /* آمن داخل <script> */
 const WA_SVG = '<svg width="22" height="22" viewBox="0 0 32 32" aria-hidden="true"><path fill="currentColor" d="M16 3a13 13 0 0 0-11.2 19.6L3 29l6.6-1.7A13 13 0 1 0 16 3zm5.8 15.7c-.3-.2-1.9-.9-2.2-1s-.5-.2-.7.2-.8 1-1 1.2-.4.2-.7.1a8.7 8.7 0 0 1-4.3-3.8c-.3-.6.3-.5.9-1.7a.6.6 0 0 0 0-.6l-1-2.4c-.3-.6-.5-.5-.7-.5h-.6a1.2 1.2 0 0 0-.9.4 3.6 3.6 0 0 0-1.1 2.7 6.3 6.3 0 0 0 1.3 3.3 14.4 14.4 0 0 0 5.5 4.9c2 .9 2.8.9 3.8.8a3.3 3.3 0 0 0 2.1-1.5 2.7 2.7 0 0 0 .2-1.5c-.1-.2-.3-.3-.6-.4z"/></svg>';
 const TEL_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.8.7a2 2 0 0 1 1.7 2z"/></svg>';
@@ -400,7 +401,7 @@ function translit(name) {
   const m = { "ا": "a", "أ": "a", "إ": "a", "آ": "a", "ب": "b", "ت": "t", "ث": "th", "ج": "j", "ح": "h", "خ": "kh", "د": "d", "ذ": "dh", "ر": "r", "ز": "z", "س": "s", "ش": "sh", "ص": "s", "ض": "d", "ط": "t", "ظ": "z", "ع": "a", "غ": "gh", "ف": "f", "ق": "q", "ك": "k", "ل": "l", "م": "m", "ن": "n", "ه": "h", "ة": "a", "و": "w", "ي": "y", "ى": "a", "ئ": "y", "ؤ": "w", "ء": "" };
   return normArea(name).replace(/^ال(?=\S)/, "").split("").map(c => c === " " ? "-" : (m[c] !== undefined ? m[c] : (/[a-z0-9]/i.test(c) ? c.toLowerCase() : ""))).join("").replace(/-+/g, "-").replace(/^-|-$/g, "");
 }
-const pageNamesOf = slug => [slug + ".html"].concat(["land", "villa", "farm", "apt"].map(c => `${CAT_SLUG[c]}-${slug}.html`));
+const pageNamesOf = slug => [slug + ".html"].concat(CAT_KEYS.map(c => `${CAT_SLUG[c]}-${slug}.html`));
 /** null إن كان الرابط صالحاً، وإلا سبب الرفض (بالنسبة لمنطقة forArea التي قد تكون جديدة) */
 function slugProblem(slug, forArea) {
   if (!/^[a-z][a-z0-9-]{1,30}$/.test(slug) || /--|-$/.test(slug)) return "الرابط: حروف إنكليزية صغيرة وأرقام وشرطة فقط، يبدأ بحرف (مثال: sahnaya).";
@@ -466,7 +467,7 @@ function specRow(x) {
 function searchHtml(live) {
   const optsArea = AREA_ORDER.filter(a => live.some(x => x.area === a))
     .map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join("");
-  const optsCat = ["land", "villa", "farm", "apt"].filter(k => live.some(x => CAT_EN[x.cat] === k))
+  const optsCat = CAT_KEYS.filter(k => live.some(x => CAT_EN[x.cat] === k))
     .map(k => `<option value="${k}">${CAT_AR[k]}</option>`).join("");
   const budgets = [["", "كل الميزانيات"], ["0-500000", "حتى 500 ألف $"],
     ["500000-1000000", "500 ألف — مليون $"], ["1000000-3000000", "1 — 3 مليون $"],
@@ -486,7 +487,7 @@ function shareHtml(x) {
 }
 /* نموذج «دوّرلي على عقار» */
 function requestHtml(live) {
-  const cats = ["أرض", "فيلا", "مزرعة", "شقة"].map(v => `<option value="${v}">${v}</option>`).join("");
+  const cats = CATS.map(v => `<option value="${v}">${v}</option>`).join("");
   const areas = AREA_ORDER.filter(a => CORE_AREAS.includes(a) || (live || []).some(x => x.area === a)).map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join("");
   const sizes = ["حتى دنم", "1 — 5 دنم", "5 — 10 دنم", "أكثر من 10 دنم"];
   const optsSize = sizes.map(v => `<option value="${v}">${v}</option>`).join("");
@@ -508,8 +509,8 @@ function requestHtml(live) {
 }
 
 /* ===== صفحات التصفّح ===== */
-const CAT_SLUG = { land: "land", villa: "villas", farm: "farms", apt: "apartments" };
-const CAT_PL = { land: "أراضٍ", villa: "فلل", farm: "مزارع", apt: "شقق" };
+const CAT_SLUG = { land: "land", villa: "villas", farm: "farms", apt: "apartments", invest: "investment" };
+const CAT_PL = { land: "أراضٍ", villa: "فلل", farm: "مزارع", apt: "شقق", invest: "عقارات استثمارية" };
 const MIN_CAT = 2;
 
 function nProp(n) {
@@ -528,7 +529,7 @@ function collectionsAll(live) {
       title: `عقارات ${a} — أراضٍ وفلل ومزارع للبيع | ${NAME} مستشار عقاري`,
       crumb: "عقارات " + a, area: a, items
     });
-    for (const c of ["land", "villa", "farm", "apt"]) {
+    for (const c of CAT_KEYS) {
       const sub = items.filter(x => CAT_EN[x.cat] === c);
       if (sub.length < MIN_CAT) continue;
       out.push({
@@ -773,7 +774,7 @@ function loadAvatar() {
 
 function postCaption(x) {
   const [n, u] = sizeOf(x), [main, unit2, total] = priceTxt(x);
-  const tags = { land: "#أراضي_للبيع", villa: "#فلل_للبيع", farm: "#مزارع_للبيع", apt: "#شقق_للبيع" };
+  const tags = { land: "#أراضي_للبيع", villa: "#فلل_للبيع", farm: "#مزارع_للبيع", apt: "#شقق_للبيع", invest: "#عقارات_استثمارية" };
   const ask = x.confirmed === false;
   const priceLine = ask ? "السعر عند التواصل" : (unit2 === "للدنم" ? `${main} للدنم` : main);
   const lines = [
