@@ -34,10 +34,9 @@ const ok = (n, c, extra = '') => console.log(c ? 'PASS' : 'FAIL', n, extra);
 const errs = [];
 let dialogs = [], answer = true;
 async function open() {
-  const p = await ctx.newPage(); await p.addInitScript(() => { Object.defineProperty(window, 'indexedDB', { value: undefined }); }); p.on('pageerror', e => errs.push(e.message));
+  const p = await ctx.newPage(); await p.addInitScript(() => { try { localStorage.removeItem('mk_admin_draft'); } catch (e) { } }); await p.addInitScript(() => { Object.defineProperty(window, 'indexedDB', { value: undefined }); }); p.on('pageerror', e => errs.push(e.message));
   p.on('dialog', d => { dialogs.push(d.message()); answer ? d.accept() : d.dismiss(); });
   await p.goto('http://localhost:8769/admin.html', { waitUntil: 'domcontentloaded' });
-  await p.evaluate(() => localStorage.removeItem('mk_admin_draft'));
   await p.waitForTimeout(400);
   if (await p.isVisible('#s_token')) { await p.fill('#s_token', 'fake'); await p.click('#s_go'); }
   await p.waitForSelector('#app:not([hidden])');

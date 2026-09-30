@@ -34,10 +34,9 @@ const ok = (n, c, extra = '') => console.log(c ? 'PASS' : 'FAIL', n, extra);
 const errs = [];
 let dialogs = [], answer = true;
 async function open(keepDraft) {
-  const p = await ctx.newPage(); p.on('pageerror', e => errs.push(e.message));
+  const p = await ctx.newPage(); if (!keepDraft) await p.addInitScript(() => { try { localStorage.removeItem('mk_admin_draft'); } catch (e) { } }); p.on('pageerror', e => errs.push(e.message));
   p.on('dialog', d => { dialogs.push(d.message()); answer ? d.accept() : d.dismiss(); });
   await p.goto('http://localhost:8769/admin.html', { waitUntil: 'domcontentloaded' });
-  if (!keepDraft) await p.evaluate(() => localStorage.removeItem('mk_admin_draft'));
   await p.waitForTimeout(400);
   if (await p.isVisible('#s_token')) { await p.fill('#s_token', 'fake'); await p.click('#s_go'); }
   await p.waitForSelector('#app:not([hidden])');
@@ -68,11 +67,11 @@ ok('all 12 unpublished photos survive (12×~450KB — previously lost above 10)'
 ok('bar shows unpublished changes and no draft warning', /ما اننشرت/.test(await bar(p)) && !/⚠️/.test(await bar(p)), await bar(p));
 /* decline → cleared */
 await p.evaluate(async () => { await clearDraft(); }); dialogs = []; answer = false;
-p = await open(); ok('after clearing, reopening asks nothing', dialogs.length === 0);
+p = await open(true); ok('after clearing, reopening asks nothing (the draft is really gone)', dialogs.length === 0);
 /* drop button clears both stores */
 answer = true; await addPhotosFake(p, 3); dialogs = [];
 await p.click('#dropBtn'); await p.waitForTimeout(800);
-p = await open(); dialogs = []; ok('“تراجع عن التعديلات” clears the photos draft too', await p.evaluate(async () => { try { return Object.keys(await idbLoadAll()).length === 0 && !localStorage.getItem('mk_admin_draft') || JSON.parse(localStorage.getItem('mk_admin_draft')).rows && Object.keys(await idbLoadAll()).length === 0; } catch (e) { return false; } }));
+p = await open(true); dialogs = []; ok('“تراجع عن التعديلات” clears the photos draft too', await p.evaluate(async () => { try { return Object.keys(await idbLoadAll()).length === 0 && !localStorage.getItem('mk_admin_draft') || JSON.parse(localStorage.getItem('mk_admin_draft')).rows && Object.keys(await idbLoadAll()).length === 0; } catch (e) { return false; } }));
 /* IndexedDB unavailable → fallback + explicit warning when too big */
 console.log('=== 4) شبكة الأمان ===');
 setRemote(mkRows()); answer = true;
