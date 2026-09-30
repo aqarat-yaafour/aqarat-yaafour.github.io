@@ -337,7 +337,7 @@ function listingPage(x, live) {
     description: desc, datePosted: dayOf(x.updatedAt) || today(),
     about: {
       "@type": "Place", name: `${x.cat} في ${x.area}`,
-      address: { "@type": "PostalAddress", addressLocality: x.area, addressRegion: "ريف دمشق", addressCountry: "SY" }
+      address: { "@type": "PostalAddress", addressLocality: x.area, addressRegion: regionOf(x.area), addressCountry: "SY" }
     },
     offers: offer
   };
@@ -351,7 +351,7 @@ function listingPage(x, live) {
   };
   const extra = `<script type="application/ld+json">${JSON.stringify(crumbs)}<\/script>`;
   const rel = live.filter(y => y.cat === x.cat && y.code !== x.code).sort(newestFirst).slice(0, 3);
-  const specs = [["النوع", x.cat], ["المنطقة", x.area + " · ريف دمشق"], ["المساحة", n + " " + u]];
+  const specs = [["النوع", x.cat], ["المنطقة", x.area + " · " + regionOf(x.area)], ["المساحة", n + " " + u]];
   if (x.bua) specs.push(["مساحة البناء", x.bua + " م²"]);
   if (x.papers) specs.push(["نوع الأوراق", esc(x.papers)]);
   specs.push(["كود العقار", `<span class="ltr">${x.code}</span>`]);
@@ -360,7 +360,7 @@ function listingPage(x, live) {
   <div class="wrap">
     <nav class="crumbs"><a href="../index.html">العقارات</a> <span>›</span> <a href="../${areaPage}">عقارات ${esc(x.area)}</a> <span>›</span> <span>${esc(x.title)}</span></nav>
     <div class="ltop"><span class="lbadge">للبيع · ${x.cat}</span><span class="lcode">${x.code}</span></div>
-    <h1 class="ltitle">${esc(x.title)}<small>${esc(x.area)} · ريف دمشق</small></h1>
+    <h1 class="ltitle">${esc(x.title)}<small>${esc(x.area)} · ${esc(regionOf(x.area))}</small></h1>
   </div>
   <div class="stage">
     <canvas id="tile3d" aria-hidden="true"></canvas>
@@ -385,7 +385,54 @@ function listingPage(x, live) {
 ${FOOT()}`;
   return headHtml(title, desc, canonical, jsonld, extra, ogImage(x), "pg-listing") + body;
 }
-const AREA_ORDER = ["يعفور", "قرى الشام", "الصبورة", "صحنايا"];   /* مناطق العقارات المسموحة (صفحة المنطقة تُنشأ فقط إن وُجد فيها عقار) */
+/* ===== المناطق =====
+   الأساسية (تخصصك): هي وحدها تُذكر في نصوص الموقع. أي منطقة أخرى تُنشأ من نموذج العقار نفسه
+   (الاسم + رابط إنكليزي + المحافظة)، وتحصل على صفحتها وفلترها وبطاقة مشاركتها تلقائياً. */
+const CORE_AREAS = ["يعفور", "قرى الشام", "الصبورة"];
+const KNOWN_SLUGS = { "يعفور": "yaafour", "قرى الشام": "qura-alsham", "الصبورة": "sabboura", "صحنايا": "sahnaya" };
+const DEFAULT_REGION = "ريف دمشق";
+const RESERVED_SLUGS = new Set(["index", "404", "admin", "sitemap", "listing", "assets", "img", "og", "p", "tests", "data", "google", "v3", "favicon"]);
+let AREA_ORDER = CORE_AREAS.slice(), AREA_SLUG = Object.assign({}, KNOWN_SLUGS), AREA_REGION = {};
+const regionOf = a => AREA_REGION[a] || DEFAULT_REGION;
+const normArea = t => String(t || "").replace(/[\u064B-\u0652\u0640]/g, "").replace(/\s+/g, " ").trim();
+/** اقتراح رابط إنكليزي من الاسم العربي (تقريبي: الحروف المتحركة غير مكتوبة، فيُعدَّل يدوياً) */
+function translit(name) {
+  const m = { "ا": "a", "أ": "a", "إ": "a", "آ": "a", "ب": "b", "ت": "t", "ث": "th", "ج": "j", "ح": "h", "خ": "kh", "د": "d", "ذ": "dh", "ر": "r", "ز": "z", "س": "s", "ش": "sh", "ص": "s", "ض": "d", "ط": "t", "ظ": "z", "ع": "a", "غ": "gh", "ف": "f", "ق": "q", "ك": "k", "ل": "l", "م": "m", "ن": "n", "ه": "h", "ة": "a", "و": "w", "ي": "y", "ى": "a", "ئ": "y", "ؤ": "w", "ء": "" };
+  return normArea(name).replace(/^ال(?=\S)/, "").split("").map(c => c === " " ? "-" : (m[c] !== undefined ? m[c] : (/[a-z0-9]/i.test(c) ? c.toLowerCase() : ""))).join("").replace(/-+/g, "-").replace(/^-|-$/g, "");
+}
+const pageNamesOf = slug => [slug + ".html"].concat(["land", "villa", "farm", "apt"].map(c => `${CAT_SLUG[c]}-${slug}.html`));
+/** null إن كان الرابط صالحاً، وإلا سبب الرفض (بالنسبة لمنطقة forArea التي قد تكون جديدة) */
+function slugProblem(slug, forArea) {
+  if (!/^[a-z][a-z0-9-]{1,30}$/.test(slug) || /--|-$/.test(slug)) return "الرابط: حروف إنكليزية صغيرة وأرقام وشرطة فقط، يبدأ بحرف (مثال: sahnaya).";
+  if (RESERVED_SLUGS.has(slug)) return "هذا الاسم محجوز للموقع، اختر غيره.";
+  const mine = new Set(pageNamesOf(slug));
+  for (const a of AREA_ORDER) {
+    if (a === forArea) continue;
+    if (pageNamesOf(AREA_SLUG[a]).some(n => mine.has(n))) return "هذا الرابط مستعمل أو يتعارض مع منطقة «" + a + "». اختر غيره.";
+  }
+  return null;
+}
+function uniqueSlug(base, forArea) {
+  let s = base || "area", i = 2;
+  while (slugProblem(s, forArea)) { s = (base || "area") + "-" + i++; if (i > 50) break; }
+  return s;
+}
+/** يبني قائمة المناطق من العقارات: الأساسية أولاً، ثم أي منطقة وُجد فيها عقار (حتى المباع أو الموقوف) */
+function syncAreas(rows) {
+  AREA_SLUG = Object.assign({}, KNOWN_SLUGS); AREA_REGION = {};
+  AREA_ORDER = CORE_AREAS.slice();
+  const extra = [];
+  for (const r of rows) {
+    const a = normArea(r.area);
+    if (!a) continue;
+    if (!CORE_AREAS.includes(a) && !extra.includes(a)) extra.push(a);
+    if (!KNOWN_SLUGS[a] && !AREA_SLUG[a] && r.area_slug && !slugProblem(r.area_slug, a)) AREA_SLUG[a] = r.area_slug;
+    if (r.area_region && !AREA_REGION[a]) AREA_REGION[a] = r.area_region;
+  }
+  extra.sort((x, y) => x.localeCompare(y, "ar"));
+  AREA_ORDER = CORE_AREAS.concat(extra);
+  for (const a of extra) if (!AREA_SLUG[a]) AREA_SLUG[a] = uniqueSlug(translit(a), a);   /* عقار قديم بلا رابط محفوظ */
+}
 const AREAS = ["يعفور", "قرى الشام", "الصبورة", "ريف دمشق"];
 const WHY = [
   ["pin", "خبرة في المنطقة", "أعمل في يعفور وقرى الشام والصبورة بريف دمشق، وأعرف عقاراتها وأسعارها عن قرب."],
@@ -438,9 +485,9 @@ function shareHtml(x) {
     + `data-txt="${esc(txt)}">شارك العقار</button>`;
 }
 /* نموذج «دوّرلي على عقار» */
-function requestHtml() {
+function requestHtml(live) {
   const cats = ["أرض", "فيلا", "مزرعة", "شقة"].map(v => `<option value="${v}">${v}</option>`).join("");
-  const areas = AREA_ORDER.map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join("");
+  const areas = AREA_ORDER.filter(a => CORE_AREAS.includes(a) || (live || []).some(x => x.area === a)).map(a => `<option value="${esc(a)}">${esc(a)}</option>`).join("");
   const sizes = ["حتى دنم", "1 — 5 دنم", "5 — 10 دنم", "أكثر من 10 دنم"];
   const optsSize = sizes.map(v => `<option value="${v}">${v}</option>`).join("");
   const budgets = ["حتى 500 ألف $", "500 ألف — مليون $", "1 — 3 مليون $", "أكثر من 3 مليون $"];
@@ -461,9 +508,6 @@ function requestHtml() {
 }
 
 /* ===== صفحات التصفّح ===== */
-const AREA_SLUG = { "يعفور": "yaafour", "قرى الشام": "qura-alsham", "الصبورة": "sabboura", "صحنايا": "sahnaya" };
-/* قائمة المناطق في نموذج العقار تُبنى من نفس القائمة: منطقة جديدة = سطر واحد أعلاه */
-{ const sel = $("f_area"); if (sel) { sel.textContent = ""; } for (const a of AREA_ORDER) if (sel) { const o = document.createElement("option"); o.textContent = a; sel.appendChild(o); } }
 const CAT_SLUG = { land: "land", villa: "villas", farm: "farms", apt: "apartments" };
 const CAT_PL = { land: "أراضٍ", villa: "فلل", farm: "مزارع", apt: "شقق" };
 const MIN_CAT = 2;
@@ -518,7 +562,7 @@ function collectionPage(c, cols) {
     url: canonical, description: desc,
     about: {
       "@type": "Place", name: c.area,
-      address: { "@type": "PostalAddress", addressLocality: c.area, addressRegion: "ريف دمشق", addressCountry: "SY" }
+      address: { "@type": "PostalAddress", addressLocality: c.area, addressRegion: regionOf(c.area), addressCountry: "SY" }
     },
     mainEntity: {
       "@type": "ItemList", numberOfItems: items.length,
@@ -540,7 +584,7 @@ function collectionPage(c, cols) {
   <div class="wrap">
     <nav class="crumbs"><a href="index.html">العقارات</a> <span>›</span> <span>${esc(c.crumb)}</span></nav>
     <div class="chead">
-      <div class="eyebrow"><i></i>${esc(c.area)} · ريف دمشق</div>
+      <div class="eyebrow"><i></i>${esc(c.area)} · ${esc(regionOf(c.area))}</div>
       <h1>${esc(c.h1)}</h1>
       <p class="ccount">${nProp(items.length)}</p>
     </div>
@@ -613,7 +657,7 @@ function indexPage(live) {
   <div class="wrap">${collectionLinks(collectionsAll(live))}</div>
 </section>
 <div class="wrap">
-  ${requestHtml()}
+  ${requestHtml(live)}
   ${whyHtml()}
   <section id="about" class="about">
     <h2 class="h2 rv">من أنا</h2>
@@ -891,7 +935,7 @@ async function drawOgCard(x) {
     ctx.direction = "rtl"; ctx.textAlign = "right";
 
     ctx.fillStyle = GOLD; ctx.font = '800 40px "Cairo"';
-    ctx.fillText(`${x.area} · ريف دمشق`, R, 178);
+    ctx.fillText(`${x.area} · ${regionOf(x.area)}`, R, 178);
 
     ctx.fillStyle = INK; ctx.font = '400 92px "Lalezar"';
     let tl = wrapText(ctx, x.title, 1000), lh = 98, two = false;
@@ -1061,7 +1105,7 @@ st.hidden=true}catch(e){st.textContent=${JSON.stringify("الرابط ناقص �
   <header class="ghead">
     <p class="eyebrow"><i></i>صور خاصة · ${esc(x.code)}</p>
     <h1>${esc(x.title)}</h1>
-    <p class="where">${esc(x.area)} · ريف دمشق</p>
+    <p class="where">${esc(x.area)} · ${esc(regionOf(x.area))}</p>
     <div class="gspecs">${specRow(x)}</div>
     <div class="gprice">${main}${unit2 ? `<small>${unit2}</small>` : ""}</div>
     <div class="actions">
@@ -1206,6 +1250,7 @@ function say(text, kind, busy) {
 
 /* ===== العرض ===== */
 function render() {
+  syncAreas(ROWS);
   const g = $("grid"), q = query.trim();
   const list = ROWS.filter(r => {
     const sold = r.status === "مباع";
@@ -1468,6 +1513,14 @@ function updateTotal() {
   const t = mode === "للدنم" ? price * m2 / 1000 : price;
   $("totalVal").textContent = t > 0 ? money(t) : "—";
 }
+const NEW_AREA = "__new__";
+function fillAreaSelect(selected) {
+  const sel = $("f_area"); sel.textContent = "";
+  for (const a of AREA_ORDER) { const o = document.createElement("option"); o.value = a; o.textContent = a; sel.appendChild(o); }
+  const n = document.createElement("option"); n.value = NEW_AREA; n.textContent = "＋ منطقة جديدة…"; sel.appendChild(n);
+  sel.value = selected && AREA_ORDER.includes(selected) ? selected : AREA_ORDER[0];
+  $("newAreaBox").hidden = true;
+}
 function openForm(r) {
   quickRow = null;
   editing = r || null;
@@ -1477,7 +1530,10 @@ function openForm(r) {
   $("f_code").value = r ? r.code : nextCode();
   $("f_code").readOnly = !!r;
   $("f_cat").value = r && CATS.includes(r.cat) ? r.cat : "أرض";
-  $("f_area").value = r ? (r.area || "يعفور") : "يعفور";
+  syncAreas(ROWS);
+  fillAreaSelect(r ? normArea(r.area) : "يعفور");
+  $("f_area_new").value = ""; $("f_area_slug").value = ""; $("f_area_region").value = DEFAULT_REGION;
+  $("f_area_slug").dataset.touched = "";
   $("f_title").value = r ? (r.title || "") : "";
   const m2 = r ? +r.area_m2 || 0 : 0;
   unit = (!m2 || (m2 >= 1000 && m2 % 500 === 0)) ? "dunam" : "m2";
@@ -1543,10 +1599,24 @@ function save() {
   if (!isFinite(price) || price <= 0) return fail("اكتب السعر بأرقام (مثلاً 250000).", "f_price");
   if (mode === "للدنم" && !m2) return fail("سعر الدنم بدّو مساحة أرض.", "f_land");
 
+  /* المنطقة: موجودة، أو جديدة (اسم + رابط إنكليزي + محافظة) */
+  let area = $("f_area").value, areaSlug = null, areaRegion = null;
+  if (area === NEW_AREA) {
+    area = normArea($("f_area_new").value);
+    if (!area) return fail("اكتب اسم المنطقة الجديدة.", "f_area_new");
+    const same = AREA_ORDER.find(a => normArea(a) === area);
+    if (same) area = same;                                   /* موجودة أصلاً: نستعملها بدل ما نكرّرها */
+    else {
+      areaSlug = $("f_area_slug").value.trim().toLowerCase();
+      const prob = slugProblem(areaSlug, area);
+      if (prob) return fail(prob, "f_area_slug");
+      areaRegion = normArea($("f_area_region").value) || DEFAULT_REGION;
+    }
+  } else if (!CORE_AREAS.includes(area) && !KNOWN_SLUGS[area]) { areaSlug = AREA_SLUG[area]; if (AREA_REGION[area]) areaRegion = AREA_REGION[area]; }
   const status = $("f_status").value, nowT = nowIso();
   const body = {
     code, status, cat: $("f_cat").value, title,
-    area: $("f_area").value, area_m2: m2, bua: isFinite(bua) && bua > 0 ? Math.round(bua) : null,
+    area, area_m2: m2, bua: isFinite(bua) && bua > 0 ? Math.round(bua) : null,
     mode, price: Math.round(price), nego: $("f_nego").checked, confirmed: $("f_conf").checked,
     featured: status === "مباع" ? false : $("f_feat").checked,
     papers: $("f_papers").value, feats: feats.slice(), photos: photos.slice(),
@@ -1556,6 +1626,8 @@ function save() {
     updatedAt: nowT, confirmedAt: nowT
   };
   if (status === "مباع") body.soldAt = $("f_sold").value || today();
+  if (areaSlug) body.area_slug = areaSlug;
+  if (areaRegion && areaRegion !== DEFAULT_REGION) body.area_region = areaRegion;
   /* السعر لم يتغيّر في تعديل عقار قائم؟ لا نزعجك بالتنبيه */
   const same = editing && +editing.price === body.price && editing.mode === body.mode
     && +editing.area_m2 === +body.area_m2 && editing.cat === body.cat;
@@ -1571,7 +1643,7 @@ function save() {
     if (sim.length && !confirm("⚠️ يشبه عقاراً عندك:\n" + sim.slice(0, 3).map(r => r.code + " — " + r.title + (r.status === "مباع" ? " (مباع)" : r.status === "موقوف" ? " (موقوف)" : "")).join("\n")
         + "\n\nنفس النوع والمنطقة ومساحة وسعر متقاربان.\nموافق = احفظه كعقار مستقل\nإلغاء = ارجع وراجع")) return;
   }
-  if (editing) { Object.assign(editing, body); if (status !== "مباع") delete editing.soldAt; }
+  if (editing) { delete editing.area_slug; delete editing.area_region; Object.assign(editing, body); if (status !== "مباع") delete editing.soldAt; }
   else { body._new = true; ROWS.push(body); }
   $("dlg").close();
   render();
@@ -1792,6 +1864,7 @@ async function publish() {
   try {
     say("جارٍ فحص تعديلات الأجهزة الأخرى…", "warn", true);
     const merged = await syncWithRemote();
+    syncAreas(ROWS);
     const live = liveRows();
 
     /* روابط صور قديمة (بلا مفتاح تشفير) غير آمنة: تُلغى، ويُنشأ رابط جديد مشفّر عند الطلب */
@@ -1860,16 +1933,19 @@ async function publish() {
     /* صفحات عقارات ما عادت متاحة (انحذفت أو صارت موقوفة) تُشال من الموقع
        حتى ما يوصلها زبون من جوجل ويتصل على عقار مباع */
     const keep = new Set(live.map(x => `listing/${x.code}.html`));
-    /* كل أسماء صفحات التصفّح الممكنة — نحذف ما لم يعد منها مستحقّاً */
+    /* صفحات المناطق والأصناف: ما كان في خريطة الموقع السابقة ولم يعد مستحقّاً يُحذف (المناطق ديناميكية).
+       لا يُحذف أبداً ملف خارج هذا النمط (index.html و404.html و admin.html وملفات Google). */
     const colNames = new Set();
-    for (const a of AREA_ORDER) {
-      colNames.add(AREA_SLUG[a] + ".html");
-      for (const c of ["land", "villa", "farm", "apt"]) colNames.add(`${CAT_SLUG[c]}-${AREA_SLUG[a]}.html`);
-    }
+    for (const a of AREA_ORDER) for (const n of pageNamesOf(AREA_SLUG[a])) colNames.add(n);
+    try {
+      const sm = await ghRaw(CFG.pub, "sitemap.xml");
+      if (sm) for (const m of new TextDecoder().decode(sm).matchAll(/<loc>[^<]*?\/([a-z0-9-]+\.html)<\/loc>/g)) colNames.add(m[1]);
+    } catch (e) { }
+    const PROTECTED = new Set(["index.html", "404.html", "admin.html"]);
     const colKeep = new Set(cols.map(c => c.slug));
     const deletes = existing.filter(p =>
       (p.startsWith("listing/") && p.endsWith(".html") && !keep.has(p)) ||
-      (colNames.has(p) && !colKeep.has(p)) ||
+      (colNames.has(p) && !colKeep.has(p) && !PROTECTED.has(p) && !/^google/.test(p)) ||
       /* رابط خاص أُبطل أو عقار ما عاد له صور */
       (p.startsWith(GAL_DIR + "/") && /\.(html|bin)$/.test(p) && !galKeep.has(p)) ||
       (p.startsWith("og/") && !ogKeep.has(p)) ||
@@ -2105,6 +2181,16 @@ async function restoreVersion(v, d) {
     setTimeout(() => { say("", ""); updateBar(); }, 15000);
   } catch (e) { alert("ما زبط الاسترجاع: " + e.message); }
 }
+$("f_area").addEventListener("change", () => {
+  $("newAreaBox").hidden = $("f_area").value !== NEW_AREA;
+  if (!$("newAreaBox").hidden) $("f_area_new").focus();
+});
+$("f_area_new").addEventListener("input", () => {
+  if ($("f_area_slug").dataset.touched) return;       /* لو عدّلت الرابط بيدك ما نلمسه */
+  const name = normArea($("f_area_new").value), ex = AREA_ORDER.find(a => normArea(a) === name);
+  $("f_area_slug").value = name && !ex ? uniqueSlug(KNOWN_SLUGS[name] || translit(name), name) : "";
+});
+$("f_area_slug").addEventListener("input", () => { $("f_area_slug").dataset.touched = "1"; });
 $("f_status").addEventListener("change", () => {
   const sold = $("f_status").value === "مباع";
   $("soldBox").hidden = !sold;
