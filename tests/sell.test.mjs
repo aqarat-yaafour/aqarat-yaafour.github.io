@@ -80,7 +80,7 @@ ok('the homepage has the small “اعرضه معي” link under the request fo
 ok('area list offers the core areas + the live extra area (صحنايا)', ['يعفور', 'قرى الشام', 'الصبورة', 'صحنايا'].every(a => SP.includes(`<option value="${a}"></option>`)));
 const visible = SP.replace(/<script[\s\S]*?<\/script>/g, ' ').replace(/<[^>]*>/g, ' ');
 ok('it says nothing is stored, and states no commission figure or percentage', /لا يُحفظ شيء على الموقع/.test(visible) && !/\d\s*%|عمولة\s*\d|نسبة\s*\d/.test(visible), (visible.match(/.{20}%.{10}/) || [''])[0]);
-ok('the brand positioning is unchanged on the homepage', /أعمل في يعفور وقرى الشام والصبورة بريف دمشق/.test(F.get('index.html')));
+ok('the homepage positioning is دمشق وريفها (deeper experience kept)', /أعمل في دمشق وريفها، وخبرتي الأوسع في يعفور وقرى الشام والصبورة/.test(F.get('index.html')));
 
 console.log('=== النموذج في المتصفح ===');
 const v = await ctx.newPage(); const verrs = []; v.on('pageerror', e => verrs.push(e.message)); await v.setViewportSize({ width: 390, height: 844 });

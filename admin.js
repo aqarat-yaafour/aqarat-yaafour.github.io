@@ -10,6 +10,11 @@ const LS = "mk_admin_cfg", LS_DRAFT = "mk_admin_draft";
 const BASE = "https://aqarat-yaafour.github.io";
 const PHONE_INTL = "963996606813", PHONE_LOCAL = "0996 606 813";
 const NAME = "محمد خالد", ROLE = "مستشار عقاري";
+/* نطاق عملك كما يُكتب في التعريف المختصر (وصف الصفحات والتذييل ومعاينة واتساب). خبرتك الأوسع تبقى مذكورة في «من أنا». */
+const COVER = "دمشق وريفها";
+const DEEP = "يعفور وقرى الشام والصبورة";
+/* رقم الهاتف داخل نص عربي: بلا مسافات ومحاطاً بعلامتي اتجاه (LRM) حتى لا ينقطع أو ينعكس ترتيبه في معاينة واتساب وجوجل */
+const PHONE_TXT = "\u200E" + PHONE_LOCAL.replace(/\s+/g, "") + "\u200E";
 const CAT_EN = { "أرض": "land", "فيلا": "villa", "مزرعة": "farm", "شقة": "apt", "استثماري": "invest" };
 const CAT_AR = { land: "أرض", villa: "فيلا", farm: "مزرعة", apt: "شقة", invest: "استثماري" };
 const CATS = ["أرض", "فيلا", "مزرعة", "شقة", "استثماري"];
@@ -311,7 +316,7 @@ const NAV = up => `<header class="nav">
 </header>
 `;
 const FOOT = () => `<footer class="site">
-  <div><b>${NAME}</b> · ${ROLE} · يعفور وقرى الشام، ريف دمشق</div>
+  <div><b>${NAME}</b> · ${ROLE} · ${COVER}</div>
   <div>واتساب: <a href="tel:+${PHONE_INTL}" dir="ltr">${PHONE_LOCAL}</a></div>
   <div><a class="sell-f" href="${BASE}/sell.html">لديك عقار للبيع؟ اعرضه معي</a></div>
   <div>الأسعار والتوفر قابلة للتغيير. الأوراق تُعرض كاملة قبل أي عربون.</div>
@@ -335,7 +340,7 @@ const newestFirst = (a, b) => b.code.localeCompare(a.code);
 function listingPage(x, live) {
   const [n, u] = sizeOf(x), [main, unit2, total] = priceTxt(x);
   const title = `${catNoun(x.cat)} للبيع في ${x.area} - ${n} ${u} | ${NAME} مستشار عقاري`;
-  const desc = `${x.title} في ${x.area}، مساحة ${n} ${u}. ${main}${unit2 ? " " + unit2 : ""}. كود ${x.code}. للاستفسار والمعاينة مع ${NAME}، مستشار عقاري في يعفور وقرى الشام: ${PHONE_LOCAL}.`;
+  const desc = `${x.title} في ${x.area}، مساحة ${n} ${u}. ${main}${unit2 ? " " + unit2 : ""}. كود ${x.code}. للاستفسار والمعاينة مع ${NAME}، ${ROLE} في ${COVER}. واتساب ${PHONE_TXT}`;
   const canonical = `${BASE}/listing/${x.code}.html`;
   const offer = { "@type": "Offer", priceCurrency: "USD", availability: "https://schema.org/InStock" };
   if (total) offer.price = Math.round(total);
@@ -348,7 +353,7 @@ function listingPage(x, live) {
     },
     offers: offer
   };
-  jsonld.broker = { "@type": "RealEstateAgent", "@id": BASE + "/#agent", name: NAME, telephone: "+" + PHONE_INTL, areaServed: ["يعفور", "قرى الشام", "الصبورة", "ريف دمشق"], url: BASE + "/" };
+  jsonld.broker = { "@type": "RealEstateAgent", "@id": BASE + "/#agent", name: NAME, telephone: "+" + PHONE_INTL, areaServed: AREAS, url: BASE + "/" };
   const areaPage = AREA_SLUG[x.area] + ".html";
   const crumbs = {
     "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [
@@ -379,7 +384,7 @@ function listingPage(x, live) {
     <div class="specs">${specs.map(([k, v]) => `<div class="spec"><small>${k}</small><b>${v}</b></div>`).join("")}</div>
     ${(x.feats || []).length ? `<ul class="feats">${x.feats.map(f => `<li>${esc(f)}</li>`).join("")}</ul>` : ""}
     ${x.note ? `<p class="lnote">ملاحظة: ${esc(x.note)}</p>` : ""}
-    <p class="llead">للمعاينة أو لطلب صور وأوراق هذا العقار، تواصل مع ${NAME}، ${ROLE} في يعفور وقرى الشام، واذكر الكود ${x.code}.</p>
+    <p class="llead">للمعاينة أو لطلب صور وأوراق هذا العقار، تواصل مع ${NAME}، ${ROLE} في ${COVER}، واذكر الكود ${x.code}.</p>
     <div class="actions">
       <a class="btn btn-primary" target="_blank" rel="noopener" href="${wa(`مرحباً أستاذ محمد، أستفسر عن العقار ${x.code} (${x.title} - ${x.area}).`)}">${WA_SVG}استفسر على واتساب</a>
       <a class="btn btn-ghost" href="tel:+${PHONE_INTL}" dir="ltr">${PHONE_LOCAL}</a>
@@ -440,9 +445,9 @@ function syncAreas(rows) {
   AREA_ORDER = CORE_AREAS.concat(extra);
   for (const a of extra) if (!AREA_SLUG[a]) AREA_SLUG[a] = uniqueSlug(translit(a), a);   /* عقار قديم بلا رابط محفوظ */
 }
-const AREAS = ["يعفور", "قرى الشام", "الصبورة", "ريف دمشق"];
+const AREAS = ["دمشق", "ريف دمشق", "يعفور", "قرى الشام", "الصبورة"];
 const WHY = [
-  ["pin", "خبرة في المنطقة", "أعمل في يعفور وقرى الشام والصبورة بريف دمشق، وأعرف عقاراتها وأسعارها عن قرب."],
+  ["pin", "خبرة في المنطقة", "أعمل في دمشق وريفها، وخبرتي الأوسع في يعفور وقرى الشام والصبورة، وأعرف عقاراتها وأسعارها عن قرب."],
   ["globe", "مرافقة المغتربين", "أساعد المشترين الذين لا يستطيعون الحضور: صور العقار وأوراقه ومتابعة عن بُعد."],
   ["doc", "تدقيق الأوراق", "التحقق من أوراق العقار ومتابعة الإجراءات حتى التسجيل."],
   ["tools", "تقدير كلفة البناء", "أتابع أعمال البناء والإكساء، فأقدّر لك الكلفة قبل الشراء."]
@@ -563,8 +568,8 @@ function collectionPage(c, cols) {
       ? ` الأسعار من ${money(totals[0])} إلى ${money(totals[totals.length - 1])}.`
       : ` السعر ${money(totals[0])}.`;
   }
-  const desc = `${c.h1}: ${nProp(items.length)} متاحة الآن مع ${NAME}، ${ROLE} في يعفور وقرى الشام.`
-    + `${rng} معاينة على الأرض ومرافقة من المعاينة حتى التسجيل. واتساب ${PHONE_LOCAL}.`;
+  const desc = `${c.h1}: ${nProp(items.length)} متاحة الآن مع ${NAME}، ${ROLE} في ${COVER}.`
+    + `${rng} معاينة على الأرض ومرافقة من المعاينة حتى التسجيل. واتساب ${PHONE_TXT}`;
   const canonical = `${BASE}/${c.slug}`;
   const jsonld = {
     "@context": "https://schema.org", "@type": "CollectionPage", name: c.h1,
@@ -614,8 +619,8 @@ ${FOOT()}`;
 }
 
 function indexPage(live) {
-  const title = "عقارات يعفور وقرى الشام والصبورة | أراضٍ وفلل ومزارع للبيع - محمد خالد";
-  const desc = `أراضٍ وفلل ومزارع وشقق للبيع في يعفور وقرى الشام والصبورة بريف دمشق. ${live.length} عقاراً متاحاً مع ${NAME}، ${ROLE} — مرافقة من المعاينة حتى التسجيل. واتساب ${PHONE_LOCAL}.`;
+  const title = "عقارات دمشق وريفها | أراضٍ وفلل ومزارع للبيع - محمد خالد";
+  const desc = `أراضٍ وفلل ومزارع وشقق وأصول استثمارية للبيع في دمشق وريفها، وخبرتي الأوسع في يعفور وقرى الشام والصبورة. ${live.length} عقاراً متاحاً مع ${NAME}، ${ROLE} — مرافقة من المعاينة حتى التسجيل. واتساب ${PHONE_TXT}`;
   const jsonld = {
     "@context": "https://schema.org", "@type": "RealEstateAgent", "@id": BASE + "/#agent", name: NAME, jobTitle: ROLE,
     url: BASE + "/", telephone: "+" + PHONE_INTL, image: ogImage(null), description: desc,
@@ -633,7 +638,7 @@ function indexPage(live) {
 <section class="hero" id="hero">
   <canvas id="hero3d" aria-hidden="true"></canvas>
   <div class="hcopy" id="hcopy">
-    <div class="eyebrow"><i></i>عقارات مختارة · ريف دمشق</div>
+    <div class="eyebrow"><i></i>عقارات مختارة · ${COVER}</div>
     <h1 id="htitle"><span class="giant"><span class="w" style="animation-delay:.1s">يعفور</span></span><span class="giant2"><span class="w gtext" style="animation-delay:.25s">وقرى الشام</span></span></h1>
     <p class="sr">${esc(desc)}</p>
   </div>
@@ -658,7 +663,7 @@ function indexPage(live) {
   <div class="stats">${stats.map(([v, l]) => `<div class="stat rv"><b data-count="${v}">${v}</b><small>${l}</small></div>`).join("")}</div>
 </div></section>
 <section class="sec" id="listings">
-  <div class="wrap"><p class="kicker rv">كل العقارات <b>02</b></p><h2 class="h2 rv">أراضٍ وفلل ومزارع<br><span class="gtext">للبيع في يعفور وقرى الشام</span></h2></div>
+  <div class="wrap"><p class="kicker rv">كل العقارات <b>02</b></p><h2 class="h2 rv">أراضٍ وفلل ومزارع<br><span class="gtext">للبيع في ${COVER}</span></h2></div>
   ${searchHtml(live)}
   <p class="rcount" id="rcount">${live.length} عقار متاح</p>
   <div class="index" id="listings-grid">${list.map((x, i) => rowHtml(x, i, "")).join("")}</div>
@@ -670,11 +675,11 @@ function indexPage(live) {
   ${whyHtml()}
   <section id="about" class="about">
     <h2 class="h2 rv">من أنا</h2>
-    <p class="rv">أنا ${NAME}، ${ROLE} أعمل في يعفور وقرى الشام والصبورة بريف دمشق. أساعد المشترين، ومنهم المغتربون الذين لا يستطيعون الحضور، على اختيار الأرض أو الفيلا المناسبة، والتحقق من الأوراق، ومتابعة الإجراءات حتى التسجيل. وإلى جانب الوساطة العقارية أتابع أعمال البناء والإكساء، فأستطيع تقدير كلفة البناء أو الإكساء قبل الشراء.</p>
+    <p class="rv">أنا ${NAME}، ${ROLE} أعمل في دمشق وريفها، وخبرتي الأوسع في يعفور وقرى الشام والصبورة. أساعد المشترين، ومنهم المغتربون الذين لا يستطيعون الحضور، على اختيار الأرض أو الفيلا المناسبة، والتحقق من الأوراق، ومتابعة الإجراءات حتى التسجيل. وإلى جانب الوساطة العقارية أتابع أعمال البناء والإكساء، فأستطيع تقدير كلفة البناء أو الإكساء قبل الشراء.</p>
     <h2 class="h2 rv" style="margin-top:40px">أسئلة متكررة</h2>
     <dl class="faq">
-      <dt>في أي مناطق تعمل؟</dt><dd>يعفور وقرى الشام والصبورة وما حولها في ريف دمشق.</dd>
-      <dt>هل عندك عقارات في الصبورة؟</dt><dd>الصبورة من مناطق عملي. المعروض على الموقع اليوم في يعفور وقرى الشام الملاصقتين لها — تواصل معي وبشوفلك المتوفر بالصبورة.</dd>
+      <dt>في أي مناطق تعمل؟</dt><dd>أعمل في دمشق وريفها، وخبرتي الأوسع في يعفور وقرى الشام والصبورة.</dd>
+      <dt>هل عندك عقارات في منطقة معيّنة؟</dt><dd>المتوفر اليوم مرتّب حسب المنطقة في روابط «تصفّح حسب المنطقة» أعلاه. وإن لم تجد ما تبحث عنه، تواصل معي وأبحث لك عن المتاح.</dd>
       <dt>شو المتوفر عندك؟</dt><dd>أراضٍ زراعية وسكنية ومرخّصة، وفلل ومزارع وشقق، بمساحات من دنم حتى 100 دنم.</dd>
       <dt>هل أستطيع الشراء وأنا خارج سوريا؟</dt><dd>نعم. أرسل لك صور العقار وأوراقه، وأرافق الإجراءات حتى التسجيل حسب ما يسمح به القانون ووكالتك.</dd>
       <dt>كيف أستفسر عن عقار؟</dt><dd>افتح صفحة العقار وأرسل رسالة واتساب فيها كود العقار، مثل MK-012.</dd>
@@ -690,9 +695,9 @@ function indexPage(live) {
 ${FOOT()}`;
   const faq = {
     "@context": "https://schema.org", "@type": "FAQPage", mainEntity: [
-      { "@type": "Question", name: "في أي مناطق يعمل محمد خالد؟", acceptedAnswer: { "@type": "Answer", text: "يعفور وقرى الشام والصبورة وما حولها في ريف دمشق." } },
-      { "@type": "Question", name: "هل توجد عقارات في الصبورة؟", acceptedAnswer: { "@type": "Answer", text: "الصبورة من مناطق العمل. المعروض حالياً في يعفور وقرى الشام الملاصقتين لها في ريف دمشق." } },
-      { "@type": "Question", name: "ما العقارات المتوفرة في يعفور وقرى الشام؟", acceptedAnswer: { "@type": "Answer", text: "أراضٍ زراعية وسكنية ومرخّصة، وفلل ومزارع وشقق، بمساحات من دنم حتى 100 دنم." } },
+      { "@type": "Question", name: "في أي مناطق يعمل محمد خالد؟", acceptedAnswer: { "@type": "Answer", text: "يعمل في دمشق وريفها، وخبرته الأوسع في يعفور وقرى الشام والصبورة." } },
+      { "@type": "Question", name: "هل توجد عقارات في منطقة معيّنة؟", acceptedAnswer: { "@type": "Answer", text: "المتوفر حالياً مرتّب حسب المنطقة في صفحات المناطق على الموقع، ويمكن التواصل المباشر للبحث عن المتاح." } },
+      { "@type": "Question", name: "ما العقارات المتوفرة؟", acceptedAnswer: { "@type": "Answer", text: "أراضٍ زراعية وسكنية ومرخّصة، وفلل ومزارع وشقق، بمساحات من دنم حتى 100 دنم." } },
       { "@type": "Question", name: "هل يمكن الشراء من خارج سوريا؟", acceptedAnswer: { "@type": "Answer", text: "نعم، مع إرسال صور العقار وأوراقه ومرافقة الإجراءات حتى التسجيل حسب القانون والوكالة." } }]
   };
   return headHtml(title, desc, BASE + "/", jsonld,
@@ -702,13 +707,13 @@ ${FOOT()}`;
    النموذج يفتح واتساب برسالة منظمة (mk.js)، ولا يُحفظ شيء على الموقع. */
 function sellPage(live) {
   const title = "لديك عقار للبيع؟ اعرضه مع محمد خالد | مستشار عقاري في ريف دمشق";
-  const desc = `تريد بيع أرض أو فيلا أو مزرعة أو شقة أو أصل استثماري؟ أرسل بيانات عقارك إلى ${NAME}، ${ROLE}، ونراجع الأوراق معاً قبل أي عرض. واتساب ${PHONE_LOCAL}.`;
+  const desc = `تريد بيع أرض أو فيلا أو مزرعة أو شقة أو أصل استثماري؟ أرسل بيانات عقارك إلى ${NAME}، ${ROLE}، ونراجع الأوراق معاً قبل أي عرض. واتساب ${PHONE_TXT}`;
   const canonical = BASE + "/sell.html";
   const opt = a => a.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
   const areas = AREA_ORDER.filter(a => CORE_AREAS.includes(a) || live.some(x => x.area === a)).map(a => `<option value="${esc(a)}"></option>`).join("");
   const cats = opt(["أرض", "فيلا", "مزرعة", "شقة", "استثماري أو تجاري", "غير ذلك"]);
   const faqs = [
-    ["في أي مناطق تقبل العقارات؟", `تخصصي ${CORE_AREAS.join(" و")}، وأنظر أيضاً في عروض المناطق القريبة في ريف دمشق حسب كل حالة.`],
+    ["في أي مناطق تقبل العقارات؟", `أعمل في ${COVER}، وخبرتي الأوسع في ${DEEP}، وأنظر في كل عرض على حدة.`],
     ["هل يُنشر السعر؟", "حسب رغبتك: يُعرض السعر، أو يُكتب «السعر عند التواصل» فيصلني المهتمون الجادّون فقط."],
     ["هل تُنشر صور عقاري للجميع؟", "لا. الصور تُحفظ بشكل خاص، وتُرسل للمهتم الجاد عبر رابط خاص."],
     ["هل تُحفظ بياناتي على الموقع؟", "لا. النموذج يفتح واتساب برسالة جاهزة تراجعها وترسلها بنفسك."]
@@ -729,7 +734,7 @@ function sellPage(live) {
       <div class="eyebrow"><i></i>للملاك والوكلاء</div>
       <h1>لديك عقار للبيع؟</h1>
     </div>
-    <p class="lead">أرسل بيانات عقارك، ونراجع الأوراق معاً قبل أي عرض. أنا ${NAME}، ${ROLE} أعمل في ${CORE_AREAS.join(" و")} بريف دمشق، وأنظر في كل عرض على حدة.</p>
+    <p class="lead">أرسل بيانات عقارك، ونراجع الأوراق معاً قبل أي عرض. أنا ${NAME}، ${ROLE} أعمل في ${COVER}، وأنظر في كل عرض على حدة.</p>
 
     <section class="rv" id="how">
       <h2 class="h2">كيف نشتغل</h2>
@@ -802,9 +807,9 @@ function llmsTxt(live, cols) {
   const L = (t, u, d) => `- [${t}](${BASE}/${u})` + (d ? `: ${d}` : "");
   const areaCols = cols.filter(c => c.slug === AREA_SLUG[c.area] + ".html");
   const catCols = cols.filter(c => !areaCols.includes(c));
-  return `# ${NAME} — ${ROLE} في ${CORE_AREAS.join(" و")}
+  return `# ${NAME} — ${ROLE} في ${COVER}
 
-> وسيط عقاري في ريف دمشق (سوريا) يعرض أراضٍ وفللاً ومزارع وشققاً وأصولاً استثمارية للبيع، ويرافق المشتري من المعاينة والتحقق من الأوراق حتى التسجيل. التواصل عبر واتساب: +${PHONE_INTL} (${PHONE_LOCAL}).
+> وسيط عقاري في دمشق وريفها (سوريا)، خبرته الأوسع في ${DEEP}. يعرض أراضٍ وفللاً ومزارع وشققاً وأصولاً استثمارية للبيع، ويرافق المشتري من المعاينة والتحقق من الأوراق حتى التسجيل. التواصل عبر واتساب: +${PHONE_INTL} (${PHONE_LOCAL}).
 
 - الأسعار بالدولار الأمريكي (USD). «السعر عند التواصل» تعني أن السعر غير معلن.
 - عدد العقارات المتاحة الآن: ${live.length}. آخر تحديث: ${last}.
@@ -844,7 +849,7 @@ function llmsFull(live) {
   });
   return `# ${NAME} — العقارات المتاحة (تفاصيل كاملة)
 
-> ${ROLE} في ${CORE_AREAS.join(" و")} بريف دمشق. الأسعار بالدولار الأمريكي (USD). آخر تحديث: ${last}. للتأكد من التوفر والسعر الحالي: واتساب +${PHONE_INTL}.
+> ${ROLE} في ${COVER}. الأسعار بالدولار الأمريكي (USD). آخر تحديث: ${last}. للتأكد من التوفر والسعر الحالي: واتساب +${PHONE_INTL}.
 
 ${blocks.join("\n\n") || "لا توجد عقارات متاحة حالياً."}
 `;
@@ -947,7 +952,7 @@ function postCaption(x) {
   (x.feats || []).forEach(f => lines.push(`• ${f}`));
   if (x.note) lines.push(`\nملاحظة: ${x.note}`);
   lines.push(``, `الأوراق تُعرض كاملة قبل أي عربون.`, `كود العقار: ${x.code}`,
-    `للاستفسار والمعاينة واتساب: ${PHONE_LOCAL}`, `${NAME} | ${ROLE}`, ``,
+    `للاستفسار والمعاينة واتساب: ${PHONE_TXT}`, `${NAME} | ${ROLE}`, ``,
     `#${x.area.replace(/\s+/g, "_")} ${tags[CAT_EN[x.cat]]} #عقارات_سوريا #عقارات_ريف_دمشق`);
   return lines.join("\n");
 }

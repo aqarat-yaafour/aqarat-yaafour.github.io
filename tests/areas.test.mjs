@@ -109,7 +109,7 @@ ok('sitemap lists every new area page', ['jaramana.html', 'mazzeh.html'].every(x
 ok('homepage filter and request form offer the new areas', ['جرمانا', 'المزة'].every(a => F.get('index.html').includes(`<option value="${a}">`)) && (F.get('index.html').match(/<option value="جرمانا">/g) || []).length >= 2);
 ok('region is per area: Mazzeh says دمشق (not ريف دمشق), Jaramana says ريف دمشق', /المزة · دمشق/.test(F.get(`listing/${codeM}.html`)) && !/المزة · ريف دمشق/.test(F.get(`listing/${codeM}.html`)) && /"addressRegion":"دمشق"/.test(F.get(`listing/${codeM}.html`)) && /جرمانا · ريف دمشق/.test(F.get(`listing/${codeJ}.html`)));
 ok('public data.json never carries the internal slug/region fields', !/area_slug|area_region/.test(F.get('data.json')));
-ok('the owner\'s brand copy is untouched (specialised in his 3 areas)', /أعمل في يعفور وقرى الشام والصبورة بريف دمشق/.test(F.get('index.html')) && !/جرمانا|المزة/.test((F.get('index.html').match(/<title>[^<]*<\/title>/) || [''])[0]) && /<h2 class="h2 rv">من أنا<\/h2>\s*<p class="rv">[^<]*يعفور وقرى الشام والصبورة[^<]*<\/p>/.test(F.get('index.html')));
+ok('the brand copy says دمشق وريفها with the deeper experience, and does NOT list the new areas', /أعمل في دمشق وريفها، وخبرتي الأوسع في يعفور وقرى الشام والصبورة/.test(F.get('index.html')) && !/جرمانا|المزة/.test((F.get('index.html').match(/<title>[^<]*<\/title>/) || [''])[0]));
 ok('core area pages keep their exact URLs', F.has('yaafour.html') && F.has('qura-alsham.html'));
 
 console.log('=== 3) أخطاء الرابط ===');
