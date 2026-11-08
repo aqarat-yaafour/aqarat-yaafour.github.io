@@ -442,5 +442,23 @@
   "papers": "طابو أخضر",
   "photos": [],
   "featured": true
+ },
+ {
+  "code": "MK-023",
+  "cat": "apt",
+  "title": "مكان مميز قريب من الشارع العام فيه طاقة شمسية متكاملة، انتر نت فضائي ، كسوة جيدة جدا",
+  "area": "الصبورة",
+  "area_m2": null,
+  "bua": 132,
+  "price": null,
+  "mode": "ask",
+  "nego": false,
+  "feats": [],
+  "note": "",
+  "total": null,
+  "unconfirmed": true,
+  "papers": "",
+  "photos": [],
+  "featured": true
  }
 ]
